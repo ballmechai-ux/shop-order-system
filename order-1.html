@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>สั่งอาหาร</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1712;
+    --paper:#161311;
+    --char:#242019;
+    --char-2:#2e2820;
+    --turmeric:#f0a93a;
+    --turmeric-deep:#c97f1c;
+    --chili:#e2492c;
+    --leaf:#7a9a4a;
+    --cream:#f3ead9;
+    --line:#3a332a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--cream);
+    font-family:'Sarabun',sans-serif;
+    min-height:100vh;
+    padding-bottom:96px;
+  }
+  header.top{
+    position:sticky;top:0;z-index:20;
+    background:linear-gradient(180deg,var(--paper) 70%,rgba(22,19,17,0));
+    padding:18px 18px 10px;
+  }
+  .table-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--char);border:1px solid var(--line);
+    border-radius:999px;padding:6px 14px 6px 10px;
+    font-family:'Kanit',sans-serif;font-weight:600;font-size:14px;
+    color:var(--turmeric);
+  }
+  .table-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--chili);}
+  h1.brand{
+    font-family:'Kanit',sans-serif;font-weight:800;
+    font-size:26px;margin:10px 0 2px;color:var(--cream);
+    letter-spacing:.3px;
+  }
+  .sub{color:#9c9284;font-size:13px;margin:0;}
+
+  nav.cats{
+    display:flex;gap:8px;overflow-x:auto;padding:14px 18px 4px;
+    scrollbar-width:none;
+  }
+  nav.cats::-webkit-scrollbar{display:none;}
+  .cat-chip{
+    flex:0 0 auto;
+    font-family:'Kanit',sans-serif;font-weight:600;font-size:14px;
+    padding:8px 16px;border-radius:999px;
+    background:var(--char);color:#c9beac;
+    border:1px solid var(--line);
+    cursor:pointer;white-space:nowrap;
+  }
+  .cat-chip.active{
+    background:var(--turmeric);color:#241a06;border-color:var(--turmeric);
+  }
+
+  main{padding:8px 18px 0;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;}
+  .item-card{
+    background:var(--char);border:1px solid var(--line);
+    border-radius:16px;overflow:hidden;display:flex;flex-direction:column;
+    position:relative;
+  }
+  .item-img{
+    width:100%;aspect-ratio:1/1;object-fit:cover;
+    background:var(--char-2);display:block;
+  }
+  .item-img.placeholder{display:flex;align-items:center;justify-content:center;font-size:28px;}
+  .sold-out-tag{
+    position:absolute;top:8px;left:8px;
+    background:rgba(20,17,14,.85);color:#c9beac;
+    font-size:11px;font-family:'Kanit',sans-serif;
+    padding:3px 9px;border-radius:999px;border:1px solid var(--line);
+  }
+  .item-body{padding:10px 10px 12px;display:flex;flex-direction:column;gap:6px;flex:1;}
+  .item-name{font-family:'Kanit',sans-serif;font-weight:600;font-size:14.5px;line-height:1.3;}
+  .item-price{color:var(--turmeric);font-weight:700;font-family:'Kanit',sans-serif;font-size:15px;margin-top:auto;}
+  .item-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+
+  .stepper{display:flex;align-items:center;gap:8px;}
+  .stepper button{
+    width:28px;height:28px;border-radius:8px;border:1px solid var(--line);
+    background:var(--char-2);color:var(--cream);font-size:16px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .stepper button:active{transform:scale(.92);}
+  .stepper .qty{min-width:16px;text-align:center;font-family:'Kanit',sans-serif;font-weight:600;}
+
+  .add-btn{
+    background:var(--turmeric);color:#241a06;border:none;
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:13px;
+    padding:7px 14px;border-radius:9px;
+  }
+  .add-btn:active{transform:scale(.96);}
+  .add-btn[disabled]{background:var(--char-2);color:#6b6355;}
+
+  /* cart bar */
+  .cart-bar{
+    position:fixed;left:14px;right:14px;bottom:14px;z-index:30;
+    background:var(--chili);border-radius:18px;
+    padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+    font-family:'Kanit',sans-serif;
+    transform:translateY(120%);transition:transform .25s ease;
+  }
+  .cart-bar.show{transform:translateY(0);}
+  .cart-bar .count{
+    background:rgba(0,0,0,.25);border-radius:999px;
+    width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:13px;
+  }
+  .cart-bar .mid{display:flex;align-items:center;gap:10px;color:#fff;font-weight:600;font-size:14px;}
+  .cart-bar .total{color:#fff;font-weight:800;font-size:16px;}
+
+  /* cart sheet */
+  .overlay{
+    position:fixed;inset:0;background:rgba(10,8,6,.6);z-index:40;
+    display:none;
+  }
+  .overlay.show{display:block;}
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;
+    background:var(--paper);border-radius:20px 20px 0 0;
+    max-height:80vh;display:flex;flex-direction:column;
+    transform:translateY(100%);transition:transform .28s ease;
+    border-top:1px solid var(--line);
+  }
+  .sheet.show{transform:translateY(0);}
+  .sheet-head{padding:16px 18px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);}
+  .sheet-head h2{font-family:'Kanit',sans-serif;font-size:17px;margin:0;}
+  .sheet-close{background:none;border:none;color:#9c9284;font-size:20px;padding:4px;}
+  .sheet-list{overflow-y:auto;padding:8px 18px;flex:1;}
+  .cart-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .cart-row .name{flex:1;font-size:14px;}
+  .cart-row .price{font-family:'Kanit',sans-serif;font-size:13px;color:#9c9284;}
+  .sheet-foot{padding:14px 18px 18px;border-top:1px solid var(--line);}
+  .sheet-total{display:flex;justify-content:space-between;font-family:'Kanit',sans-serif;font-weight:700;font-size:16px;margin-bottom:10px;}
+  .confirm-btn{
+    width:100%;background:var(--leaf);color:#12180a;border:none;
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:15px;
+    padding:14px;border-radius:12px;
+  }
+  .confirm-btn:active{transform:scale(.98);}
+  .confirm-btn[disabled]{background:var(--char-2);color:#6b6355;}
+
+  .toast{
+    position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-40px);
+    background:var(--leaf);color:#12180a;font-family:'Kanit',sans-serif;font-weight:600;
+    padding:10px 20px;border-radius:999px;font-size:13px;z-index:60;
+    opacity:0;transition:all .25s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .empty-note{color:#9c9284;font-size:13px;text-align:center;padding:16px;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <span class="table-badge"><span class="dot"></span><span id="tableLabel">โต๊ะ —</span></span>
+  <h1 class="brand">เมนูวันนี้</h1>
+  <p class="sub">แตะเพื่อเพิ่มลงตะกร้า แล้วกดยืนยันสั่งอาหาร</p>
+</header>
+
+<nav class="cats" id="catNav"></nav>
+
+<main>
+  <div class="grid" id="menuGrid"></div>
+  <p class="empty-note" id="emptyNote" style="display:none;">ยังไม่มีเมนูในหมวดนี้</p>
+</main>
+
+<div class="cart-bar" id="cartBar">
+  <div class="mid"><span class="count" id="cartCount">0</span> รายการในตะกร้า</div>
+  <div class="total" id="cartTotalMini">0 บาท</div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-head">
+    <h2>ตะกร้าของคุณ</h2>
+    <button class="sheet-close" id="sheetClose">✕</button>
+  </div>
+  <div class="sheet-list" id="cartList"></div>
+  <div class="sheet-foot">
+    <div class="sheet-total"><span>รวมทั้งหมด</span><span id="cartTotalFull">0 บาท</span></div>
+    <button class="confirm-btn" id="confirmBtn">ยืนยันสั่งอาหาร</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">ส่งออเดอร์เรียบร้อย 🎉</div>
+
+<!-- ===================== Firebase ===================== -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script>
+// วางค่า firebaseConfig ของโปรเจกต์คุณตรงนี้ (ได้จากขั้นตอน "ลงทะเบียนแอปเว็บ" ใน Firebase Console)
+const firebaseConfig = {
+  apiKey: "AIzaSyDAp28CroK5j_iE8LQXngUXXs1DaASqpE8",
+  authDomain: "shop-order-system-62765.firebaseapp.com",
+  databaseURL: "https://shop-order-system-62765-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "shop-order-system-62765",
+  storageBucket: "shop-order-system-62765.firebasestorage.app",
+  messagingSenderId: "777357129637",
+  appId: "1:777357129637:web:776e6c6dca05db99909a4c"
+};
+let db = null;
+try{
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+}catch(e){ console.warn("ยังไม่ได้ตั้งค่า Firebase:", e); }
+
+// ===================== ข้อมูลตัวอย่าง (ใช้ตอนยังไม่เชื่อม Firebase) =====================
+const sampleMenu = {
+  item001:{name:"ส้มตำไทย",category:"ยำ/ส้มตำ",price:45,image:"",available:true},
+  item002:{name:"ต้มยำกุ้ง",category:"ต้ม/แกง",price:80,image:"",available:true},
+  item003:{name:"ข้าวผัดหมู",category:"จานเดียว",price:50,image:"",available:true},
+  item004:{name:"ไก่ทอด",category:"ของทอด",price:60,image:"",available:false},
+  item005:{name:"ชาเย็น",category:"เครื่องดื่ม",price:25,image:"",available:true},
+  item006:{name:"น้ำมะนาว",category:"เครื่องดื่ม",price:20,image:"",available:true},
+};
+
+// ===================== state =====================
+const params = new URLSearchParams(location.search);
+const tableNo = params.get('table') || '—';
+document.getElementById('tableLabel').textContent = 'โต๊ะ ' + tableNo;
+
+let menu = {};
+let activeCat = 'ทั้งหมด';
+let cart = {}; // itemId -> qty
+
+function loadMenu(){
+  if(db){
+    db.ref('menu').on('value', snap=>{
+      menu = snap.val() || {};
+      if(Object.keys(menu).length === 0){ menu = sampleMenu; }
+      renderCategories();
+      renderMenu();
+    });
+  } else {
+    menu = sampleMenu;
+    renderCategories();
+    renderMenu();
+  }
+}
+
+function renderCategories(){
+  const cats = ['ทั้งหมด', ...new Set(Object.values(menu).map(i=>i.category))];
+  const nav = document.getElementById('catNav');
+  nav.innerHTML = '';
+  cats.forEach(c=>{
+    const chip = document.createElement('div');
+    chip.className = 'cat-chip' + (c===activeCat ? ' active' : '');
+    chip.textContent = c;
+    chip.onclick = ()=>{ activeCat = c; renderCategories(); renderMenu(); };
+    nav.appendChild(chip);
+  });
+}
+
+function renderMenu(){
+  const grid = document.getElementById('menuGrid');
+  grid.innerHTML = '';
+  const entries = Object.entries(menu).filter(([id,i])=> activeCat==='ทั้งหมด' || i.category===activeCat);
+  document.getElementById('emptyNote').style.display = entries.length ? 'none' : 'block';
+
+  entries.forEach(([id, item])=>{
+    const qty = cart[id] || 0;
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.innerHTML = `
+      ${item.image
+        ? `<img class="item-img" src="${item.image}" alt="${item.name}" loading="lazy">`
+        : `<div class="item-img placeholder">🍽️</div>`}
+      ${!item.available ? `<span class="sold-out-tag">ของหมด</span>` : ''}
+      <div class="item-body">
+        <div class="item-name">${item.name}</div>
+        <div class="item-price">${item.price} บาท</div>
+        <div class="item-foot">
+          ${qty>0
+            ? `<div class="stepper">
+                 <button data-act="dec" data-id="${id}">−</button>
+                 <span class="qty">${qty}</span>
+                 <button data-act="inc" data-id="${id}">+</button>
+               </div>`
+            : `<button class="add-btn" data-act="inc" data-id="${id}" ${!item.available?'disabled':''}>เพิ่ม</button>`}
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  grid.querySelectorAll('[data-act]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.id;
+      if(btn.dataset.act === 'inc') cart[id] = (cart[id]||0) + 1;
+      else { cart[id] = (cart[id]||0) - 1; if(cart[id]<=0) delete cart[id]; }
+      renderMenu();
+      updateCartBar();
+    };
+  });
+}
+
+function cartTotal(){
+  return Object.entries(cart).reduce((sum,[id,qty])=> sum + (menu[id]?.price||0)*qty, 0);
+}
+function cartCount(){
+  return Object.values(cart).reduce((a,b)=>a+b,0);
+}
+
+function updateCartBar(){
+  const bar = document.getElementById('cartBar');
+  const count = cartCount();
+  document.getElementById('cartCount').textContent = count;
+  document.getElementById('cartTotalMini').textContent = cartTotal() + ' บาท';
+  bar.classList.toggle('show', count>0);
+}
+
+// cart sheet
+const overlay = document.getElementById('overlay');
+const sheet = document.getElementById('sheet');
+function openSheet(){
+  renderCartList();
+  overlay.classList.add('show');
+  sheet.classList.add('show');
+}
+function closeSheet(){
+  overlay.classList.remove('show');
+  sheet.classList.remove('show');
+}
+document.getElementById('cartBar').onclick = openSheet;
+document.getElementById('sheetClose').onclick = closeSheet;
+overlay.onclick = closeSheet;
+
+function renderCartList(){
+  const list = document.getElementById('cartList');
+  list.innerHTML = '';
+  const entries = Object.entries(cart);
+  if(entries.length === 0){
+    list.innerHTML = '<p class="empty-note">ยังไม่ได้เลือกเมนู</p>';
+  }
+  entries.forEach(([id,qty])=>{
+    const item = menu[id];
+    if(!item) return;
+    const row = document.createElement('div');
+    row.className = 'cart-row';
+    row.innerHTML = `
+      <div class="stepper">
+        <button data-act="dec" data-id="${id}">−</button>
+        <span class="qty">${qty}</span>
+        <button data-act="inc" data-id="${id}">+</button>
+      </div>
+      <div class="name">${item.name}</div>
+      <div class="price">${item.price * qty} บาท</div>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('[data-act]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.id;
+      if(btn.dataset.act === 'inc') cart[id] = (cart[id]||0) + 1;
+      else { cart[id] = (cart[id]||0) - 1; if(cart[id]<=0) delete cart[id]; }
+      renderCartList();
+      renderMenu();
+      updateCartBar();
+      document.getElementById('cartTotalFull').textContent = cartTotal() + ' บาท';
+    };
+  });
+  document.getElementById('cartTotalFull').textContent = cartTotal() + ' บาท';
+}
+
+document.getElementById('confirmBtn').onclick = ()=>{
+  if(cartCount() === 0) return;
+  const order = {
+    table: tableNo,
+    items: Object.entries(cart).map(([id,qty])=>({itemId:id, name:menu[id].name, price:menu[id].price, qty})),
+    total: cartTotal(),
+    status: 'pending',
+    timestamp: Date.now()
+  };
+
+  if(!db){
+    alert('ยังไม่ได้เชื่อมต่อฐานข้อมูล (Firebase) — ออเดอร์นี้จะไม่ถูกบันทึก');
+    return;
+  }
+
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังส่ง...';
+
+  db.ref('orders').push(order)
+    .then(()=>{
+      cart = {};
+      closeSheet();
+      renderMenu();
+      updateCartBar();
+      showToast();
+    })
+    .catch((err)=>{
+      alert('ส่งออเดอร์ไม่สำเร็จ: ' + err.message);
+    })
+    .finally(()=>{
+      btn.disabled = false;
+      btn.textContent = 'ยืนยันสั่งอาหาร';
+    });
+};
+
+function showToast(){
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+loadMenu();
+</script>
+</body>
+</html>
