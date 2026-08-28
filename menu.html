@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>จัดการเมนู</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1712; --paper:#161311; --char:#242019; --char-2:#2e2820;
+    --turmeric:#f0a93a; --chili:#e2492c; --leaf:#7a9a4a;
+    --cream:#f3ead9; --line:#3a332a; --dim:#9c9284;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper);color:var(--cream);font-family:'Sarabun',sans-serif;min-height:100vh;}
+  input,select{font-family:'Sarabun',sans-serif;}
+
+  /* PIN gate */
+  #pinGate{
+    position:fixed;inset:0;background:var(--paper);z-index:100;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;
+  }
+  #pinGate h2{font-family:'Kanit',sans-serif;font-weight:700;font-size:18px;margin:0;}
+  .pin-display{
+    display:flex;gap:12px;
+  }
+  .pin-dot{
+    width:16px;height:16px;border-radius:50%;border:2px solid var(--line);background:transparent;
+  }
+  .pin-dot.filled{background:var(--turmeric);border-color:var(--turmeric);}
+  .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:280px;width:100%;}
+  .pin-key{
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:22px;
+    background:var(--char);color:var(--cream);border:1px solid var(--line);
+    border-radius:14px;padding:18px 0;
+  }
+  .pin-key:active{transform:scale(.95);}
+  .pin-key.clear{color:var(--chili);font-size:14px;}
+  .pin-error{color:var(--chili);font-size:13px;height:16px;}
+
+  /* main app (hidden until unlocked) */
+  #app{display:none;}
+  header{position:sticky;top:0;z-index:10;background:var(--paper);border-bottom:1px solid var(--line);padding:16px 18px 12px;display:flex;justify-content:space-between;align-items:center;}
+  h1{font-family:'Kanit',sans-serif;font-weight:800;font-size:20px;margin:0;}
+  .add-btn{
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:13.5px;
+    background:var(--turmeric);color:#241a06;border:none;padding:10px 16px;border-radius:10px;
+  }
+  .add-btn:active{transform:scale(.96);}
+
+  main{padding:14px 18px 40px;}
+  .cat-group{margin-bottom:18px;}
+  .cat-title{font-family:'Kanit',sans-serif;font-weight:700;font-size:14px;color:var(--dim);margin:0 0 8px 2px;}
+
+  .menu-item{
+    background:var(--char);border:1px solid var(--line);border-radius:14px;
+    padding:12px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:center;
+  }
+  .mi-thumb{width:48px;height:48px;border-radius:10px;background:var(--char-2);flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:20px;object-fit:cover;}
+  .mi-info{flex:1;min-width:0;}
+  .mi-name{font-family:'Kanit',sans-serif;font-weight:600;font-size:14.5px;}
+  .mi-meta{font-size:12px;color:var(--dim);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;}
+  .mi-profit{color:var(--leaf);}
+  .mi-stock{color:var(--turmeric);}
+  .mi-stock.low{color:var(--chili);}
+  .mi-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+  .avail-toggle{
+    font-family:'Kanit',sans-serif;font-weight:600;font-size:11px;
+    padding:4px 10px;border-radius:999px;border:none;
+  }
+  .avail-toggle.on{background:rgba(122,154,74,.2);color:#a9c97f;}
+  .avail-toggle.off{background:rgba(226,73,44,.2);color:#ff8a6b;}
+  .mi-edit-row{display:flex;gap:8px;}
+  .icon-btn{background:none;border:none;color:var(--dim);font-size:16px;padding:4px;}
+
+  /* form sheet */
+  .overlay{position:fixed;inset:0;background:rgba(10,8,6,.65);z-index:40;display:none;}
+  .overlay.show{display:block;}
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--paper);
+    border-radius:20px 20px 0 0;max-height:90vh;display:flex;flex-direction:column;
+    transform:translateY(100%);transition:transform .28s ease;border-top:1px solid var(--line);
+  }
+  .sheet.show{transform:translateY(0);}
+  .sheet-head{padding:16px 18px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);}
+  .sheet-head h2{font-family:'Kanit',sans-serif;font-size:16px;margin:0;}
+  .sheet-close{background:none;border:none;color:var(--dim);font-size:20px;padding:4px;}
+  .sheet-body{overflow-y:auto;padding:16px 18px;flex:1;}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;color:var(--dim);margin-bottom:6px;font-family:'Kanit',sans-serif;}
+  .field input, .field select{
+    width:100%;background:var(--char);border:1px solid var(--line);border-radius:10px;
+    color:var(--cream);font-size:14.5px;padding:11px 12px;
+  }
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .profit-preview{
+    background:var(--char);border-radius:10px;padding:10px 12px;font-size:13px;
+    display:flex;justify-content:space-between;margin-bottom:14px;color:var(--dim);
+  }
+  .profit-preview b{color:var(--leaf);font-family:'Kanit',sans-serif;}
+
+  .save-btn{
+    width:100%;background:var(--turmeric);color:#241a06;border:none;
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:15px;
+    padding:14px;border-radius:12px;margin-bottom:8px;
+  }
+  .delete-btn{
+    width:100%;background:transparent;color:var(--chili);border:1px solid var(--chili);
+    font-family:'Kanit',sans-serif;font-weight:600;font-size:13.5px;
+    padding:12px;border-radius:12px;margin-bottom:10px;
+  }
+  .empty{text-align:center;color:var(--dim);padding:60px 20px;font-size:14px;}
+  .toast{
+    position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-40px);
+    background:var(--leaf);color:#12180a;font-family:'Kanit',sans-serif;font-weight:600;
+    padding:10px 20px;border-radius:999px;font-size:13px;z-index:60;
+    opacity:0;transition:all .25s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div id="pinGate">
+  <h2>🔒 ใส่รหัสผ่านเพื่อจัดการเมนู</h2>
+  <div class="pin-display" id="pinDisplay"></div>
+  <div class="pin-error" id="pinError"></div>
+  <div class="pin-pad">
+    <button class="pin-key" data-k="1">1</button>
+    <button class="pin-key" data-k="2">2</button>
+    <button class="pin-key" data-k="3">3</button>
+    <button class="pin-key" data-k="4">4</button>
+    <button class="pin-key" data-k="5">5</button>
+    <button class="pin-key" data-k="6">6</button>
+    <button class="pin-key" data-k="7">7</button>
+    <button class="pin-key" data-k="8">8</button>
+    <button class="pin-key" data-k="9">9</button>
+    <button class="pin-key clear" data-k="clear">ล้าง</button>
+    <button class="pin-key" data-k="0">0</button>
+    <button class="pin-key clear" data-k="back">⌫</button>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>จัดการเมนู</h1>
+    <button class="add-btn" id="addBtn">+ เพิ่มเมนู</button>
+  </header>
+  <main id="menuList"></main>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-head">
+    <h2 id="sheetTitle">เพิ่มเมนูใหม่</h2>
+    <button class="sheet-close" id="sheetClose">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="field"><label>ชื่อเมนู</label><input type="text" id="fName" placeholder="เช่น ส้มตำไทย"></div>
+    <div class="field"><label>หมวดหมู่</label><input type="text" id="fCategory" list="catList" placeholder="เช่น ยำ/ส้มตำ"><datalist id="catList"></datalist></div>
+    <div class="row2">
+      <div class="field"><label>ราคาต้นทุน (บาท)</label><input type="number" id="fCost" placeholder="0"></div>
+      <div class="field"><label>ราคาขาย (บาท)</label><input type="number" id="fPrice" placeholder="0"></div>
+    </div>
+    <div class="field"><label>จำนวนสต็อก</label><input type="number" id="fStock" placeholder="เว้นว่างได้ถ้าไม่นับสต็อก"></div>
+    <div class="field"><label>ลิงก์รูปภาพ (ถ้ามี)</label><input type="text" id="fImage" placeholder="https://..."></div>
+    <div class="profit-preview">
+      <span>กำไรต่อชิ้น</span>
+      <b id="profitPreview">0 บาท</b>
+    </div>
+    <button class="save-btn" id="saveBtn">บันทึก</button>
+    <button class="delete-btn" id="deleteBtn" style="display:none;">ลบเมนูนี้</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">บันทึกแล้ว 🎉</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script>
+const CORRECT_PIN = "1234"; // เปลี่ยนรหัสได้ตรงนี้
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDAp28CroK5j_iE8LQXngUXXs1DaASqpE8",
+  authDomain: "shop-order-system-62765.firebaseapp.com",
+  databaseURL: "https://shop-order-system-62765-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "shop-order-system-62765",
+  storageBucket: "shop-order-system-62765.firebasestorage.app",
+  messagingSenderId: "777357129637",
+  appId: "1:777357129637:web:776e6c6dca05db99909a4c"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ---------- PIN gate ----------
+let pinEntry = "";
+function renderPinDots(){
+  const disp = document.getElementById('pinDisplay');
+  disp.innerHTML = '';
+  for(let i=0;i<4;i++){
+    const d = document.createElement('div');
+    d.className = 'pin-dot' + (i < pinEntry.length ? ' filled' : '');
+    disp.appendChild(d);
+  }
+}
+document.querySelectorAll('.pin-key').forEach(btn=>{
+  btn.onclick = ()=>{
+    const k = btn.dataset.k;
+    document.getElementById('pinError').textContent = '';
+    if(k === 'clear'){ pinEntry = ''; }
+    else if(k === 'back'){ pinEntry = pinEntry.slice(0,-1); }
+    else if(pinEntry.length < 4){ pinEntry += k; }
+    renderPinDots();
+    if(pinEntry.length === 4){
+      if(pinEntry === CORRECT_PIN){
+        document.getElementById('pinGate').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        loadMenu();
+      } else {
+        document.getElementById('pinError').textContent = 'รหัสไม่ถูกต้อง';
+        setTimeout(()=>{ pinEntry=''; renderPinDots(); }, 500);
+      }
+    }
+  };
+});
+renderPinDots();
+
+// ---------- menu data ----------
+let menu = {};
+let editingId = null;
+
+function loadMenu(){
+  db.ref('menu').on('value', snap=>{
+    menu = snap.val() || {};
+    render();
+  });
+}
+
+function render(){
+  const list = document.getElementById('menuList');
+  list.innerHTML = '';
+  const entries = Object.entries(menu);
+  if(entries.length === 0){
+    list.innerHTML = `<div class="empty">ยังไม่มีเมนู กด "+ เพิ่มเมนู" เพื่อเริ่มเลยครับ</div>`;
+    return;
+  }
+  const byCat = {};
+  entries.forEach(([id,it])=>{
+    const c = it.category || 'ไม่ระบุหมวดหมู่';
+    if(!byCat[c]) byCat[c] = [];
+    byCat[c].push([id,it]);
+  });
+
+  // update category datalist
+  document.getElementById('catList').innerHTML = Object.keys(byCat).map(c=>`<option value="${c}">`).join('');
+
+  Object.entries(byCat).forEach(([cat, items])=>{
+    const group = document.createElement('div');
+    group.className = 'cat-group';
+    const profit = (it)=> (it.price||0) - (it.cost||0);
+    group.innerHTML = `<div class="cat-title">${cat}</div>` + items.map(([id,it])=>`
+      <div class="menu-item">
+        ${it.image ? `<img class="mi-thumb" src="${it.image}">` : `<div class="mi-thumb">🍽️</div>`}
+        <div class="mi-info">
+          <div class="mi-name">${it.name}</div>
+          <div class="mi-meta">
+            <span>${it.price||0} บาท</span>
+            <span class="mi-profit">กำไร ${profit(it)} บาท</span>
+            ${it.stock !== undefined && it.stock !== null && it.stock !== '' ? `<span class="mi-stock ${it.stock<=3?'low':''}">สต็อก ${it.stock}</span>` : ''}
+          </div>
+        </div>
+        <div class="mi-actions">
+          <button class="avail-toggle ${it.available!==false?'on':'off'}" data-id="${id}" data-avail="${it.available!==false}">${it.available!==false?'กำลังขาย':'ของหมด'}</button>
+          <div class="mi-edit-row">
+            <button class="icon-btn" data-edit="${id}">✏️</button>
+          </div>
+        </div>
+      </div>`).join('');
+    list.appendChild(group);
+  });
+
+  list.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.onclick = ()=> openForm(btn.dataset.edit);
+  });
+  list.querySelectorAll('.avail-toggle').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.id;
+      const newVal = btn.dataset.avail !== 'true';
+      db.ref('menu/' + id + '/available').set(newVal);
+    };
+  });
+}
+
+// ---------- form ----------
+const overlay = document.getElementById('overlay');
+const sheet = document.getElementById('sheet');
+
+function openForm(id){
+  editingId = id || null;
+  const it = id ? menu[id] : {};
+  document.getElementById('sheetTitle').textContent = id ? 'แก้ไขเมนู' : 'เพิ่มเมนูใหม่';
+  document.getElementById('fName').value = it.name || '';
+  document.getElementById('fCategory').value = it.category || '';
+  document.getElementById('fCost').value = it.cost ?? '';
+  document.getElementById('fPrice').value = it.price ?? '';
+  document.getElementById('fStock').value = it.stock ?? '';
+  document.getElementById('fImage').value = it.image || '';
+  document.getElementById('deleteBtn').style.display = id ? 'block' : 'none';
+  updateProfitPreview();
+  overlay.classList.add('show');
+  sheet.classList.add('show');
+}
+function closeForm(){
+  overlay.classList.remove('show');
+  sheet.classList.remove('show');
+}
+document.getElementById('addBtn').onclick = ()=> openForm(null);
+document.getElementById('sheetClose').onclick = closeForm;
+overlay.onclick = closeForm;
+
+function updateProfitPreview(){
+  const cost = parseFloat(document.getElementById('fCost').value) || 0;
+  const price = parseFloat(document.getElementById('fPrice').value) || 0;
+  document.getElementById('profitPreview').textContent = (price - cost) + ' บาท';
+}
+document.getElementById('fCost').oninput = updateProfitPreview;
+document.getElementById('fPrice').oninput = updateProfitPreview;
+
+document.getElementById('saveBtn').onclick = ()=>{
+  const name = document.getElementById('fName').value.trim();
+  const category = document.getElementById('fCategory').value.trim() || 'ไม่ระบุหมวดหมู่';
+  const cost = parseFloat(document.getElementById('fCost').value) || 0;
+  const price = parseFloat(document.getElementById('fPrice').value) || 0;
+  const stockRaw = document.getElementById('fStock').value;
+  const stock = stockRaw === '' ? null : parseInt(stockRaw);
+  const image = document.getElementById('fImage').value.trim();
+
+  if(!name || !price){
+    alert('กรุณาใส่ชื่อเมนูและราคาขายอย่างน้อย');
+    return;
+  }
+
+  const data = { name, category, cost, price, stock, image, available: editingId ? (menu[editingId].available !== false) : true };
+  const ref = editingId ? db.ref('menu/' + editingId) : db.ref('menu').push();
+
+  ref.set(data)
+    .then(()=>{ closeForm(); showToast('บันทึกแล้ว 🎉'); })
+    .catch(err=> alert('บันทึกไม่สำเร็จ: ' + err.message));
+};
+
+document.getElementById('deleteBtn').onclick = ()=>{
+  if(!editingId) return;
+  if(!confirm('ลบเมนูนี้ใช่ไหม?')) return;
+  db.ref('menu/' + editingId).remove()
+    .then(()=>{ closeForm(); showToast('ลบแล้ว'); })
+    .catch(err=> alert('ลบไม่สำเร็จ: ' + err.message));
+};
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
