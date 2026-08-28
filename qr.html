@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>สร้าง QR โต๊ะ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1712; --paper:#161311; --char:#242019; --char-2:#2e2820;
+    --turmeric:#f0a93a; --chili:#e2492c; --leaf:#7a9a4a;
+    --cream:#f3ead9; --line:#3a332a; --dim:#9c9284;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper);color:var(--cream);font-family:'Sarabun',sans-serif;min-height:100vh;padding-bottom:30px;}
+
+  header{padding:18px 18px 10px;}
+  h1{font-family:'Kanit',sans-serif;font-weight:800;font-size:22px;margin:0 0 2px;}
+  .sub{color:var(--dim);font-size:12.5px;margin:0;}
+
+  .controls{
+    margin:14px 18px;background:var(--char);border:1px solid var(--line);
+    border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;
+  }
+  .field-row{display:flex;gap:10px;align-items:flex-end;}
+  .field{flex:1;}
+  .field label{display:block;font-size:12.5px;color:var(--dim);margin-bottom:6px;font-family:'Kanit',sans-serif;}
+  .field input{
+    width:100%;background:var(--char-2);border:1px solid var(--line);border-radius:10px;
+    color:var(--cream);font-size:15px;padding:11px 12px;font-family:'Kanit',sans-serif;
+  }
+  .gen-btn{
+    background:var(--turmeric);color:#241a06;border:none;
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:14px;
+    padding:13px 20px;border-radius:10px;white-space:nowrap;
+  }
+  .gen-btn:active{transform:scale(.96);}
+  .baseurl-note{font-size:11.5px;color:var(--dim);line-height:1.5;}
+  .baseurl-note code{color:var(--turmeric);}
+
+  .print-btn{
+    margin:0 18px 14px;width:calc(100% - 36px);
+    background:var(--leaf);color:#12180a;border:none;
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:14px;
+    padding:13px;border-radius:10px;
+  }
+  .print-btn:active{transform:scale(.98);}
+
+  #qrGrid{
+    display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 18px;
+  }
+  .qr-card{
+    background:#fff;border-radius:16px;padding:16px 10px;
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+  }
+  .qr-card canvas{max-width:100%;height:auto;}
+  .qr-table-label{
+    font-family:'Kanit',sans-serif;font-weight:800;font-size:18px;color:#1c1712;
+  }
+  .qr-shop-label{
+    font-family:'Sarabun',sans-serif;font-size:11px;color:#5a5248;
+  }
+
+  @media print{
+    header, .controls, .print-btn{ display:none !important; }
+    body{ background:#fff; padding:0; }
+    #qrGrid{ grid-template-columns:1fr 1fr; gap:20px; padding:20px; }
+    .qr-card{ break-inside:avoid; border:1px dashed #999; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>สร้าง QR โต๊ะ</h1>
+  <p class="sub">ใส่จำนวนโต๊ะ แล้วพิมพ์ QR ไปแปะได้เลย</p>
+</header>
+
+<div class="controls">
+  <div class="field-row">
+    <div class="field">
+      <label>เริ่มโต๊ะที่</label>
+      <input type="number" id="startNum" value="1" min="1">
+    </div>
+    <div class="field">
+      <label>ถึงโต๊ะที่</label>
+      <input type="number" id="endNum" value="10" min="1">
+    </div>
+    <button class="gen-btn" id="genBtn">สร้าง QR</button>
+  </div>
+  <div class="baseurl-note">
+    ลิงก์ฐาน: <code id="baseUrlDisplay"></code><br>
+    (ถ้าไม่ตรงกับที่ใช้จริง แก้ตัวแปร <code>BASE_URL</code> ในโค้ดไฟล์นี้)
+  </div>
+</div>
+
+<button class="print-btn" id="printBtn">🖨️ พิมพ์ QR ทั้งหมด</button>
+
+<div id="qrGrid"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+// แก้ตรงนี้ถ้า URL จริงของเว็บไม่ตรง
+const BASE_URL = "https://ballmechai-ux.github.io/shop-order-system/order.html";
+
+document.getElementById('baseUrlDisplay').textContent = BASE_URL;
+
+function generate(){
+  const start = parseInt(document.getElementById('startNum').value) || 1;
+  const end = parseInt(document.getElementById('endNum').value) || 1;
+  const grid = document.getElementById('qrGrid');
+  grid.innerHTML = '';
+
+  for(let n = start; n <= end; n++){
+    const card = document.createElement('div');
+    card.className = 'qr-card';
+    const qrBox = document.createElement('div');
+    card.appendChild(qrBox);
+
+    const label = document.createElement('div');
+    label.className = 'qr-table-label';
+    label.textContent = 'โต๊ะ ' + n;
+    card.appendChild(label);
+
+    const shopLabel = document.createElement('div');
+    shopLabel.className = 'qr-shop-label';
+    shopLabel.textContent = 'สแกนเพื่อสั่งอาหาร';
+    card.appendChild(shopLabel);
+
+    grid.appendChild(card);
+
+    new QRCode(qrBox, {
+      text: BASE_URL + '?table=' + n,
+      width: 160,
+      height: 160,
+      colorDark: "#1c1712",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+}
+
+document.getElementById('genBtn').onclick = generate;
+document.getElementById('printBtn').onclick = ()=> window.print();
+
+generate(); // สร้างครั้งแรกอัตโนมัติ
+</script>
+</body>
+</html>
