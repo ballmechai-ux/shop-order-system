@@ -6,7 +6,7 @@
 <title>แคชเชียร์</title>
 <link rel="manifest" href="manifest-cashier.json">
 <meta name="theme-color" content="#161311">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-cashier-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -41,6 +41,19 @@
   .pay-btn:active{transform:scale(.96);}
   .empty{text-align:center;color:var(--dim);padding:60px 20px;font-size:14px;}
   .empty .big{font-size:34px;margin-bottom:8px;}
+
+  #billRequestBanner{display:flex;flex-direction:column;gap:8px;padding:0 18px;margin-top:10px;}
+  .bill-req-card{
+    background:var(--chili);border-radius:14px;padding:14px 16px;
+    display:flex;justify-content:space-between;align-items:center;
+    animation:reqPulse 1.2s infinite;
+  }
+  @keyframes reqPulse{0%,100%{box-shadow:0 0 0 0 rgba(226,73,44,.5);}50%{box-shadow:0 0 0 8px rgba(226,73,44,0);}}
+  .bill-req-text{font-family:'Kanit',sans-serif;font-weight:700;color:#fff;font-size:14.5px;}
+  .bill-req-ack{
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:12.5px;
+    background:#fff;color:var(--chili);border:none;padding:8px 14px;border-radius:8px;
+  }
 
   /* history */
   .date-filter{display:flex;gap:8px;align-items:center;margin-bottom:4px;}
@@ -119,12 +132,14 @@
 
 <header>
   <h1>แคชเชียร์</h1>
-  <p class="sub"><span class="live-dot"></span> อัปเดตเรียลไทม์</p>
+  <p class="sub"><span class="live-dot"></span> อัปเดตเรียลไทม์ · <span id="soundStatus">🔕 แตะหน้าจอเพื่อเปิดเสียงเตือน</span></p>
   <div class="tabbar">
     <button class="tab-btn active" data-tab="open">💰 โต๊ะค้างชำระ</button>
     <button class="tab-btn" data-tab="history">🧾 ประวัติบิล</button>
   </div>
 </header>
+
+<div id="billRequestBanner"></div>
 
 <div class="tab-panel active" id="panel-open">
   <main id="tableList"></main>
@@ -213,6 +228,79 @@ const db = firebase.database();
 
 let shopInfo = {};
 db.ref('settings').on('value', snap=>{ shopInfo = snap.val() || {}; });
+
+// ============ sound & speech ============
+let audioCtx = null;
+let soundReady = false;
+function unlockSound(){
+  if(soundReady) return;
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    soundReady = true;
+    document.getElementById('soundStatus').textContent = '🔔 เสียงพร้อม';
+  }catch(e){}
+}
+document.addEventListener('click', unlockSound, { once:true });
+
+function playDing(){
+  if(!soundReady || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  [784, 1046, 1318].forEach((freq, i)=>{
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t + i*0.22);
+    gain.gain.exponentialRampToValueAtTime(0.9, t + i*0.22 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + i*0.22 + 0.65);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t + i*0.22);
+    osc.stop(t + i*0.22 + 0.7);
+  });
+}
+function speakThai(text){
+  if(!('speechSynthesis' in window)) return;
+  try{
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'th-TH';
+    utter.rate = 0.95;
+    utter.volume = 1;
+    speechSynthesis.speak(utter);
+  }catch(e){}
+}
+
+// ============ bill requests ============
+let billRequests = {};
+let knownReqIds = new Set();
+let firstReqLoad = true;
+db.ref('billRequests').on('value', snap=>{
+  const newReqs = snap.val() || {};
+  if(!firstReqLoad){
+    Object.entries(newReqs).forEach(([id, r])=>{
+      if(!knownReqIds.has(id) && r.status === 'pending'){
+        playDing();
+        speakThai('โต๊ะ ' + r.table + ' ขอเช็คบิล');
+      }
+    });
+  }
+  knownReqIds = new Set(Object.keys(newReqs));
+  billRequests = newReqs;
+  renderBillRequests();
+  firstReqLoad = false;
+});
+
+function renderBillRequests(){
+  const el = document.getElementById('billRequestBanner');
+  const pending = Object.entries(billRequests).filter(([id,r])=> r.status === 'pending');
+  el.innerHTML = pending.map(([id,r])=>`
+    <div class="bill-req-card">
+      <span class="bill-req-text">🔔 โต๊ะ ${r.table} ขอเช็คบิล</span>
+      <button class="bill-req-ack" data-id="${id}">รับทราบ</button>
+    </div>`).join('');
+  el.querySelectorAll('.bill-req-ack').forEach(btn=>{
+    btn.onclick = ()=> db.ref('billRequests/' + btn.dataset.id + '/status').set('done');
+  });
+}
 
 // ============ tabs ============
 document.querySelectorAll('.tab-btn').forEach(btn=>{

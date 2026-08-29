@@ -41,6 +41,14 @@
     color:var(--turmeric);
   }
   .table-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--chili);}
+  .call-bill-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    background:transparent;border:1px solid var(--line);color:var(--dim);
+    font-family:'Kanit',sans-serif;font-weight:600;font-size:12.5px;
+    padding:6px 12px;border-radius:999px;margin-left:8px;
+  }
+  .call-bill-btn:active{transform:scale(.95);}
+  .call-bill-btn[disabled]{opacity:.5;}
   h1.brand{
     font-family:'Kanit',sans-serif;font-weight:800;
     font-size:26px;margin:10px 0 2px;color:var(--cream);
@@ -168,6 +176,7 @@
 
 <header class="top">
   <span class="table-badge"><span class="dot"></span><span id="tableLabel">โต๊ะ —</span></span>
+  <button class="call-bill-btn" id="callBillBtn">🧾 เช็คบิล</button>
   <h1 class="brand">เมนูวันนี้</h1>
   <p class="sub">แตะเพื่อเพิ่มลงตะกร้า แล้วกดยืนยันสั่งอาหาร</p>
 </header>
@@ -233,6 +242,25 @@ const sampleMenu = {
 const params = new URLSearchParams(location.search);
 const tableNo = params.get('table') || '—';
 document.getElementById('tableLabel').textContent = 'โต๊ะ ' + tableNo;
+
+document.getElementById('callBillBtn').onclick = ()=>{
+  if(!db){
+    alert('ยังไม่ได้เชื่อมต่อฐานข้อมูล');
+    return;
+  }
+  const btn = document.getElementById('callBillBtn');
+  btn.disabled = true;
+  btn.textContent = '🧾 แจ้งแล้ว รอสักครู่';
+  db.ref('billRequests').push({ table: tableNo, status: 'pending', timestamp: Date.now() })
+    .then(()=>{
+      setTimeout(()=>{ btn.disabled = false; btn.textContent = '🧾 เช็คบิล'; }, 60000);
+    })
+    .catch(err=>{
+      alert('แจ้งไม่สำเร็จ: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = '🧾 เช็คบิล';
+    });
+};
 
 let menu = {};
 let activeCat = 'ทั้งหมด';
