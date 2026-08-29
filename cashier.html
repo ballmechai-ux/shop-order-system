@@ -261,6 +261,7 @@ function playDing(){
 function speakThai(text){
   if(!('speechSynthesis' in window)) return;
   try{
+    speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'th-TH';
     utter.rate = 0.95;
@@ -270,6 +271,16 @@ function speakThai(text){
     if(thVoice) utter.voice = thVoice;
     speechSynthesis.speak(utter);
   }catch(e){}
+}
+if('speechSynthesis' in window){
+  speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged = ()=> speechSynthesis.getVoices();
+  setInterval(()=>{
+    if(speechSynthesis.speaking){
+      speechSynthesis.pause();
+      speechSynthesis.resume();
+    }
+  }, 5000);
 }
 if('speechSynthesis' in window){
   speechSynthesis.getVoices();

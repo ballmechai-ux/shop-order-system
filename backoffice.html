@@ -144,7 +144,7 @@
 
 <header>
   <h1>หลังร้าน</h1>
-  <p class="sub"><span class="live-dot"></span> อัปเดตแบบเรียลไทม์ · <span id="soundStatus">🔕 แตะหน้าจอเพื่อเปิดเสียงเตือน</span></p>
+  <p class="sub"><span class="live-dot"></span> อัปเดตแบบเรียลไทม์ · <span id="soundStatus">🔕 แตะหน้าจอเพื่อเปิดเสียงเตือน</span> · <button id="testVoiceBtn" style="font-family:'Kanit',sans-serif;font-size:11px;background:var(--char);color:var(--dim);border:1px solid var(--line);padding:3px 9px;border-radius:999px;">🗣️ ทดสอบเสียงพูด</button></p>
   <div class="tabbar">
     <button class="tab-btn active" data-tab="order">🍽️ ออเดอร์</button>
     <button class="tab-btn" data-tab="menu">📋 จัดการเมนู</button>
@@ -326,6 +326,7 @@ document.addEventListener('click', unlockSound, { once:true });
 function speakThai(text){
   if(!('speechSynthesis' in window)) return;
   try{
+    speechSynthesis.cancel(); // เคลียร์คิวเก่าที่อาจค้างอยู่ก่อนพูดประโยคใหม่
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'th-TH';
     utter.rate = 0.95;
@@ -339,7 +340,26 @@ function speakThai(text){
 if('speechSynthesis' in window){
   speechSynthesis.getVoices();
   speechSynthesis.onvoiceschanged = ()=> speechSynthesis.getVoices();
+  // แก้บั๊ก Chrome บน Android ที่ speechSynthesis จะ "หลับ" ถ้าไม่มีการเรียกใช้ต่อเนื่อง
+  setInterval(()=>{
+    if(speechSynthesis.speaking){
+      speechSynthesis.pause();
+      speechSynthesis.resume();
+    }
+  }, 5000);
 }
+
+document.getElementById('testVoiceBtn').onclick = ()=>{
+  if(!('speechSynthesis' in window)){
+    alert('เบราว์เซอร์นี้ไม่รองรับเสียงพูด (Speech Synthesis) เลย');
+    return;
+  }
+  const voices = speechSynthesis.getVoices();
+  const thVoices = voices.filter(v=> v.lang && v.lang.toLowerCase().startsWith('th'));
+  const langList = [...new Set(voices.map(v=>v.lang))].join(', ') || '(ไม่พบเสียงใดเลย)';
+  alert('พบเสียงทั้งหมด ' + voices.length + ' แบบ\nภาษาที่มี: ' + langList + '\nมีเสียงไทยไหม: ' + (thVoices.length > 0 ? 'มี ('+thVoices.length+' เสียง)' : 'ไม่มี'));
+  speakThai('ทดสอบระบบเสียงพูดภาษาไทย');
+};
 
 function playDing(){
   if(!soundReady || !audioCtx) return;
