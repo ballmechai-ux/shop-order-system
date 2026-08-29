@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>บัญชีร้าน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1712; --paper:#161311; --char:#242019; --char-2:#2e2820;
+    --turmeric:#f0a93a; --chili:#e2492c; --leaf:#7a9a4a; --blue:#4a90a4;
+    --cream:#f3ead9; --line:#3a332a; --dim:#9c9284;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper);color:var(--cream);font-family:'Sarabun',sans-serif;min-height:100vh;padding-bottom:30px;}
+  input,select{font-family:'Sarabun',sans-serif;}
+
+  #pinGate{position:fixed;inset:0;background:var(--paper);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;}
+  #pinGate h2{font-family:'Kanit',sans-serif;font-weight:700;font-size:18px;margin:0;}
+  .pin-display{display:flex;gap:12px;}
+  .pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);background:transparent;}
+  .pin-dot.filled{background:var(--turmeric);border-color:var(--turmeric);}
+  .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:280px;width:100%;}
+  .pin-key{font-family:'Kanit',sans-serif;font-weight:700;font-size:22px;background:var(--char);color:var(--cream);border:1px solid var(--line);border-radius:14px;padding:18px 0;}
+  .pin-key:active{transform:scale(.95);}
+  .pin-key.clear{color:var(--chili);font-size:14px;}
+  .pin-error{color:var(--chili);font-size:13px;height:16px;}
+
+  #app{display:none;}
+  header{position:sticky;top:0;z-index:10;background:var(--paper);border-bottom:1px solid var(--line);padding:16px 18px 0;}
+  h1{font-family:'Kanit',sans-serif;font-weight:800;font-size:20px;margin:0 0 10px;}
+  .tabbar{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;}
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tab-btn{flex:0 0 auto;text-align:center;font-family:'Kanit',sans-serif;font-weight:600;font-size:12.5px;padding:11px 10px;background:none;border:none;color:var(--dim);border-bottom:2px solid transparent;white-space:nowrap;}
+  .tab-btn.active{color:var(--turmeric);border-color:var(--turmeric);}
+  .tab-panel{display:none;padding:14px 18px 20px;}
+  .tab-panel.active{display:block;}
+
+  .date-range{display:flex;gap:8px;margin-bottom:12px;}
+  .date-range input{flex:1;background:var(--char);border:1px solid var(--line);border-radius:10px;color:var(--cream);padding:9px 10px;font-size:13px;}
+  .quick-range{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .qr-chip{font-family:'Kanit',sans-serif;font-weight:600;font-size:12px;background:var(--char-2);color:var(--cream);border:1px solid var(--line);padding:6px 12px;border-radius:999px;}
+  .qr-chip.active{background:var(--turmeric);color:#241a06;border-color:var(--turmeric);}
+
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .stat-card{background:var(--char);border:1px solid var(--line);border-radius:14px;padding:14px;}
+  .stat-card .lbl{font-size:11.5px;color:var(--dim);margin-bottom:4px;}
+  .stat-card .val{font-family:'Kanit',sans-serif;font-weight:800;font-size:19px;}
+  .stat-card.wide{grid-column:1/-1;}
+  .stat-card .val.pos{color:var(--leaf);}
+  .stat-card .val.neg{color:var(--chili);}
+
+  .top-item-row{display:flex;justify-content:space-between;font-size:13.5px;padding:8px 0;border-bottom:1px solid var(--line);}
+  .top-item-row .rank{color:var(--turmeric);font-family:'Kanit',sans-serif;font-weight:700;margin-right:8px;}
+
+  .section-title{font-family:'Kanit',sans-serif;font-weight:700;font-size:14px;color:var(--dim);margin:16px 0 8px;}
+
+  /* expense form */
+  .exp-form{background:var(--char);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:16px;}
+  .type-row{display:flex;gap:8px;margin-bottom:12px;}
+  .type-btn{flex:1;font-family:'Kanit',sans-serif;font-weight:600;font-size:12.5px;padding:9px;border-radius:10px;background:var(--char-2);color:var(--dim);border:1px solid var(--line);}
+  .type-btn.active{background:var(--chili);color:#fff;border-color:var(--chili);}
+  .field{margin-bottom:10px;}
+  .field label{display:block;font-size:12px;color:var(--dim);margin-bottom:5px;font-family:'Kanit',sans-serif;}
+  .field input{width:100%;background:var(--char-2);border:1px solid var(--line);border-radius:9px;color:var(--cream);font-size:14px;padding:9px 11px;}
+  .add-exp-btn{width:100%;background:var(--turmeric);color:#241a06;border:none;font-family:'Kanit',sans-serif;font-weight:700;font-size:13.5px;padding:11px;border-radius:10px;}
+  .add-exp-btn:active{transform:scale(.97);}
+
+  .exp-row{background:var(--char);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+  .exp-left{flex:1;min-width:0;}
+  .exp-cat{font-family:'Kanit',sans-serif;font-weight:600;font-size:13.5px;}
+  .exp-meta{font-size:11.5px;color:var(--dim);margin-top:2px;}
+  .exp-amt{font-family:'Kanit',sans-serif;font-weight:700;font-size:14.5px;color:var(--chili);margin-right:8px;}
+  .exp-del{background:none;border:none;color:var(--dim);font-size:15px;}
+
+  /* credit */
+  .credit-form{background:var(--char);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:16px;}
+  .credit-row{background:var(--char);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+  .credit-row.paid{opacity:.5;}
+  .cr-top{display:flex;justify-content:space-between;margin-bottom:4px;}
+  .cr-name{font-family:'Kanit',sans-serif;font-weight:600;font-size:14px;}
+  .cr-amt{font-family:'Kanit',sans-serif;font-weight:700;font-size:15px;color:var(--turmeric);}
+  .cr-note{font-size:12px;color:var(--dim);margin-bottom:8px;}
+  .cr-foot{display:flex;justify-content:space-between;align-items:center;}
+  .cr-date{font-size:11px;color:var(--dim);}
+  .cr-paybtn{font-family:'Kanit',sans-serif;font-weight:600;font-size:12px;background:var(--leaf);color:#12180a;border:none;padding:6px 14px;border-radius:8px;}
+
+  .empty{text-align:center;color:var(--dim);padding:40px 20px;font-size:13.5px;}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-40px);background:var(--leaf);color:#12180a;font-family:'Kanit',sans-serif;font-weight:600;padding:10px 20px;border-radius:999px;font-size:13px;z-index:60;opacity:0;transition:all .25s ease;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div id="pinGate">
+  <h2>🔒 ใส่รหัสผ่านเพื่อดูบัญชีร้าน</h2>
+  <div class="pin-display" id="pinDisplay"></div>
+  <div class="pin-error" id="pinError"></div>
+  <div class="pin-pad">
+    <button class="pin-key" data-k="1">1</button>
+    <button class="pin-key" data-k="2">2</button>
+    <button class="pin-key" data-k="3">3</button>
+    <button class="pin-key" data-k="4">4</button>
+    <button class="pin-key" data-k="5">5</button>
+    <button class="pin-key" data-k="6">6</button>
+    <button class="pin-key" data-k="7">7</button>
+    <button class="pin-key" data-k="8">8</button>
+    <button class="pin-key" data-k="9">9</button>
+    <button class="pin-key clear" data-k="clear">ล้าง</button>
+    <button class="pin-key" data-k="0">0</button>
+    <button class="pin-key clear" data-k="back">⌫</button>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>บัญชีร้าน</h1>
+    <div class="tabbar">
+      <button class="tab-btn active" data-tab="sales">📊 ยอดขาย</button>
+      <button class="tab-btn" data-tab="expenses">💸 รายจ่าย</button>
+      <button class="tab-btn" data-tab="summary">📒 สรุปรวม</button>
+      <button class="tab-btn" data-tab="credit">🧍 ลูกค้าค้างจ่าย</button>
+    </div>
+  </header>
+
+  <!-- SALES TAB -->
+  <div class="tab-panel active" id="panel-sales">
+    <div class="quick-range" id="quickRangeSales"></div>
+    <div class="date-range">
+      <input type="date" id="salesStart">
+      <input type="date" id="salesEnd">
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="lbl">ยอดขายรวม</div><div class="val" id="salesRevenue">0 บาท</div></div>
+      <div class="stat-card"><div class="lbl">ต้นทุนรวม</div><div class="val" id="salesCogs">0 บาท</div></div>
+      <div class="stat-card wide"><div class="lbl">กำไรขั้นต้น</div><div class="val pos" id="salesGrossProfit">0 บาท</div></div>
+      <div class="stat-card"><div class="lbl">จำนวนบิล</div><div class="val" id="salesBillCount">0</div></div>
+      <div class="stat-card"><div class="lbl">เฉลี่ยต่อบิล</div><div class="val" id="salesAvg">0 บาท</div></div>
+    </div>
+    <div class="section-title">เมนูขายดี</div>
+    <div id="topItemsList"></div>
+  </div>
+
+  <!-- EXPENSES TAB -->
+  <div class="tab-panel" id="panel-expenses">
+    <div class="exp-form">
+      <div class="type-row">
+        <button class="type-btn active" id="expTypeGeneral" data-t="expense">💸 รายจ่ายทั่วไป</button>
+        <button class="type-btn" id="expTypeWithdraw" data-t="withdrawal">🧾 เบิกเงินซื้อของ</button>
+      </div>
+      <div class="field"><label>รายการ</label><input type="text" id="expCategory" placeholder="เช่น ค่าน้ำแข็ง, ค่าไฟ"></div>
+      <div class="field"><label>จำนวนเงิน (บาท)</label><input type="number" id="expAmount" placeholder="0"></div>
+      <div class="field"><label>วันที่</label><input type="date" id="expDate"></div>
+      <div class="field"><label>หมายเหตุ (ถ้ามี)</label><input type="text" id="expNote" placeholder=""></div>
+      <button class="add-exp-btn" id="addExpBtn">+ บันทึกรายจ่าย</button>
+    </div>
+
+    <div class="quick-range" id="quickRangeExp"></div>
+    <div class="date-range">
+      <input type="date" id="expStart">
+      <input type="date" id="expEnd">
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="lbl">รายจ่ายทั่วไป</div><div class="val neg" id="expTotalGeneral">0 บาท</div></div>
+      <div class="stat-card"><div class="lbl">เบิกเงินซื้อของ</div><div class="val neg" id="expTotalWithdraw">0 บาท</div></div>
+    </div>
+    <div class="section-title">รายการ</div>
+    <div id="expList"></div>
+  </div>
+
+  <!-- SUMMARY TAB -->
+  <div class="tab-panel" id="panel-summary">
+    <div class="quick-range" id="quickRangeSummary"></div>
+    <div class="date-range">
+      <input type="date" id="sumStart">
+      <input type="date" id="sumEnd">
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card wide"><div class="lbl">รายรับจากการขาย</div><div class="val pos" id="sumRevenue">0 บาท</div></div>
+      <div class="stat-card"><div class="lbl">ต้นทุนสินค้า</div><div class="val neg" id="sumCogs">0 บาท</div></div>
+      <div class="stat-card"><div class="lbl">รายจ่าย+เบิกเงิน</div><div class="val neg" id="sumExpenses">0 บาท</div></div>
+      <div class="stat-card wide"><div class="lbl">กำไรสุทธิ</div><div class="val" id="sumNetProfit">0 บาท</div></div>
+    </div>
+  </div>
+
+  <!-- CREDIT TAB -->
+  <div class="tab-panel" id="panel-credit">
+    <div class="credit-form">
+      <div class="field"><label>ชื่อลูกค้า</label><input type="text" id="crName" placeholder="ชื่อลูกค้า"></div>
+      <div class="field"><label>จำนวนเงินค้าง (บาท)</label><input type="number" id="crAmount" placeholder="0"></div>
+      <div class="field"><label>หมายเหตุ (ถ้ามี)</label><input type="text" id="crNote" placeholder="เช่น รายการที่ค้าง"></div>
+      <button class="add-exp-btn" id="addCrBtn">+ บันทึกลูกค้าค้างจ่าย</button>
+    </div>
+    <div class="section-title">ยอดค้างทั้งหมด: <span id="crTotalUnpaid">0 บาท</span></div>
+    <div id="crList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">บันทึกแล้ว 🎉</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script>
+const ADMIN_PIN = "1234";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDAp28CroK5j_iE8LQXngUXXs1DaASqpE8",
+  authDomain: "shop-order-system-62765.firebaseapp.com",
+  databaseURL: "https://shop-order-system-62765-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "shop-order-system-62765",
+  storageBucket: "shop-order-system-62765.firebasestorage.app",
+  messagingSenderId: "777357129637",
+  appId: "1:777357129637:web:776e6c6dca05db99909a4c"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ============ PIN gate ============
+let pinEntry = "";
+function renderPinDots(){
+  const disp = document.getElementById('pinDisplay');
+  disp.innerHTML = '';
+  for(let i=0;i<4;i++){
+    const d = document.createElement('div');
+    d.className = 'pin-dot' + (i < pinEntry.length ? ' filled' : '');
+    disp.appendChild(d);
+  }
+}
+document.querySelectorAll('.pin-key').forEach(btn=>{
+  btn.onclick = ()=>{
+    const k = btn.dataset.k;
+    document.getElementById('pinError').textContent = '';
+    if(k === 'clear'){ pinEntry = ''; }
+    else if(k === 'back'){ pinEntry = pinEntry.slice(0,-1); }
+    else if(pinEntry.length < 4){ pinEntry += k; }
+    renderPinDots();
+    if(pinEntry.length === 4){
+      if(pinEntry === ADMIN_PIN){
+        document.getElementById('pinGate').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        initApp();
+      } else {
+        document.getElementById('pinError').textContent = 'รหัสไม่ถูกต้อง';
+        setTimeout(()=>{ pinEntry=''; renderPinDots(); }, 500);
+      }
+    }
+  };
+});
+renderPinDots();
+
+// ============ shared data ============
+let bills = {};
+let menu = {};
+let expenses = {};
+let credits = {};
+
+function initApp(){
+  db.ref('bills').on('value', snap=>{ bills = snap.val() || {}; renderActiveTab(); });
+  db.ref('menu').on('value', snap=>{ menu = snap.val() || {}; renderActiveTab(); });
+  db.ref('expenses').on('value', snap=>{ expenses = snap.val() || {}; renderActiveTab(); });
+  db.ref('credits').on('value', snap=>{ credits = snap.val() || {}; renderActiveTab(); });
+
+  const today = new Date().toISOString().slice(0,10);
+  ['salesStart','salesEnd','expStart','expEnd','sumStart','sumEnd'].forEach(id=>{
+    document.getElementById(id).value = today;
+  });
+  document.getElementById('expDate').value = today;
+
+  buildQuickRange('quickRangeSales', ['salesStart','salesEnd'], renderSales);
+  buildQuickRange('quickRangeExp', ['expStart','expEnd'], renderExpenses);
+  buildQuickRange('quickRangeSummary', ['sumStart','sumEnd'], renderSummary);
+
+  ['salesStart','salesEnd'].forEach(id=> document.getElementById(id).onchange = renderSales);
+  ['expStart','expEnd'].forEach(id=> document.getElementById(id).onchange = renderExpenses);
+  ['sumStart','sumEnd'].forEach(id=> document.getElementById(id).onchange = renderSummary);
+
+  renderActiveTab();
+}
+
+function buildQuickRange(containerId, inputIds, renderFn){
+  const ranges = [
+    {label:'วันนี้', days:0},
+    {label:'7 วัน', days:6},
+    {label:'30 วัน', days:29},
+    {label:'เดือนนี้', month:true},
+  ];
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  ranges.forEach(r=>{
+    const chip = document.createElement('button');
+    chip.className = 'qr-chip';
+    chip.textContent = r.label;
+    chip.onclick = ()=>{
+      const end = new Date();
+      let start = new Date();
+      if(r.month){ start = new Date(end.getFullYear(), end.getMonth(), 1); }
+      else { start.setDate(end.getDate() - r.days); }
+      document.getElementById(inputIds[0]).value = start.toISOString().slice(0,10);
+      document.getElementById(inputIds[1]).value = end.toISOString().slice(0,10);
+      renderFn();
+    };
+    el.appendChild(chip);
+  });
+}
+
+// ============ tabs ============
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=> b.classList.toggle('active', b===btn));
+    document.querySelectorAll('.tab-panel').forEach(p=> p.classList.toggle('active', p.id === 'panel-' + btn.dataset.tab));
+    renderActiveTab();
+  };
+});
+
+function renderActiveTab(){
+  const active = document.querySelector('.tab-panel.active');
+  if(!active) return;
+  if(active.id === 'panel-sales') renderSales();
+  else if(active.id === 'panel-expenses') renderExpenses();
+  else if(active.id === 'panel-summary') renderSummary();
+  else if(active.id === 'panel-credit') renderCredit();
+}
+
+function inRange(dateStr, start, end){
+  return dateStr >= start && dateStr <= end;
+}
+
+// ============ SALES TAB ============
+function renderSales(){
+  const start = document.getElementById('salesStart').value;
+  const end = document.getElementById('salesEnd').value;
+  const list = Object.values(bills).filter(b=> inRange(b.dateStr, start, end));
+
+  let revenue = 0, cogs = 0;
+  const itemAgg = {};
+  list.forEach(b=>{
+    revenue += b.total || 0;
+    (b.items||[]).forEach(it=>{
+      const cost = (menu[it.itemId] && menu[it.itemId].cost) || 0;
+      cogs += cost * it.qty;
+      if(!itemAgg[it.name]) itemAgg[it.name] = {qty:0, revenue:0};
+      itemAgg[it.name].qty += it.qty;
+      itemAgg[it.name].revenue += it.price * it.qty;
+    });
+  });
+
+  document.getElementById('salesRevenue').textContent = revenue.toLocaleString() + ' บาท';
+  document.getElementById('salesCogs').textContent = cogs.toLocaleString() + ' บาท';
+  document.getElementById('salesGrossProfit').textContent = (revenue-cogs).toLocaleString() + ' บาท';
+  document.getElementById('salesBillCount').textContent = list.length;
+  document.getElementById('salesAvg').textContent = (list.length ? Math.round(revenue/list.length) : 0).toLocaleString() + ' บาท';
+
+  const topItems = Object.entries(itemAgg).sort((a,b)=> b[1].qty - a[1].qty).slice(0,10);
+  const topList = document.getElementById('topItemsList');
+  if(topItems.length === 0){
+    topList.innerHTML = `<div class="empty">ไม่มีข้อมูลการขายในช่วงนี้</div>`;
+  } else {
+    topList.innerHTML = topItems.map(([name, d], i)=>`
+      <div class="top-item-row"><span><span class="rank">#${i+1}</span>${name} (${d.qty} ชิ้น)</span><span>${d.revenue.toLocaleString()} บาท</span></div>`).join('');
+  }
+}
+
+// ============ EXPENSES TAB ============
+let expType = 'expense';
+document.getElementById('expTypeGeneral').onclick = ()=> setExpType('expense');
+document.getElementById('expTypeWithdraw').onclick = ()=> setExpType('withdrawal');
+function setExpType(t){
+  expType = t;
+  document.getElementById('expTypeGeneral').classList.toggle('active', t==='expense');
+  document.getElementById('expTypeWithdraw').classList.toggle('active', t==='withdrawal');
+}
+
+document.getElementById('addExpBtn').onclick = ()=>{
+  const category = document.getElementById('expCategory').value.trim();
+  const amount = parseFloat(document.getElementById('expAmount').value) || 0;
+  const dateStr = document.getElementById('expDate').value;
+  const note = document.getElementById('expNote').value.trim();
+  if(!category || !amount){ alert('กรุณาใส่รายการและจำนวนเงิน'); return; }
+  db.ref('expenses').push({ type:expType, category, amount, note, dateStr, timestamp: Date.now() })
+    .then(()=>{
+      document.getElementById('expCategory').value = '';
+      document.getElementById('expAmount').value = '';
+      document.getElementById('expNote').value = '';
+      showToast('บันทึกแล้ว 🎉');
+    })
+    .catch(err=> alert('บันทึกไม่สำเร็จ: ' + err.message));
+};
+
+function renderExpenses(){
+  const start = document.getElementById('expStart').value;
+  const end = document.getElementById('expEnd').value;
+  const list = Object.entries(expenses).filter(([id,e])=> inRange(e.dateStr, start, end))
+    .sort((a,b)=> b[1].timestamp - a[1].timestamp);
+
+  const totalGeneral = list.filter(([id,e])=>e.type==='expense').reduce((s,[id,e])=>s+e.amount,0);
+  const totalWithdraw = list.filter(([id,e])=>e.type==='withdrawal').reduce((s,[id,e])=>s+e.amount,0);
+  document.getElementById('expTotalGeneral').textContent = totalGeneral.toLocaleString() + ' บาท';
+  document.getElementById('expTotalWithdraw').textContent = totalWithdraw.toLocaleString() + ' บาท';
+
+  const listEl = document.getElementById('expList');
+  if(list.length === 0){
+    listEl.innerHTML = `<div class="empty">ไม่มีรายจ่ายในช่วงนี้</div>`;
+    return;
+  }
+  listEl.innerHTML = list.map(([id,e])=>`
+    <div class="exp-row">
+      <div class="exp-left">
+        <div class="exp-cat">${e.type==='withdrawal' ? '🧾' : '💸'} ${e.category}</div>
+        <div class="exp-meta">${e.dateStr}${e.note ? ' · '+e.note : ''}</div>
+      </div>
+      <div class="exp-amt">${e.amount.toLocaleString()} บาท</div>
+      <button class="exp-del" data-id="${id}">🗑️</button>
+    </div>`).join('');
+
+  listEl.querySelectorAll('.exp-del').forEach(btn=>{
+    btn.onclick = ()=>{
+      if(confirm('ลบรายการนี้ใช่ไหม?')) db.ref('expenses/' + btn.dataset.id).remove();
+    };
+  });
+}
+
+// ============ SUMMARY TAB ============
+function renderSummary(){
+  const start = document.getElementById('sumStart').value;
+  const end = document.getElementById('sumEnd').value;
+
+  const billList = Object.values(bills).filter(b=> inRange(b.dateStr, start, end));
+  let revenue = 0, cogs = 0;
+  billList.forEach(b=>{
+    revenue += b.total || 0;
+    (b.items||[]).forEach(it=>{
+      const cost = (menu[it.itemId] && menu[it.itemId].cost) || 0;
+      cogs += cost * it.qty;
+    });
+  });
+
+  const expList = Object.values(expenses).filter(e=> inRange(e.dateStr, start, end));
+  const totalExpenses = expList.reduce((s,e)=>s+e.amount,0);
+
+  const netProfit = revenue - cogs - totalExpenses;
+
+  document.getElementById('sumRevenue').textContent = revenue.toLocaleString() + ' บาท';
+  document.getElementById('sumCogs').textContent = cogs.toLocaleString() + ' บาท';
+  document.getElementById('sumExpenses').textContent = totalExpenses.toLocaleString() + ' บาท';
+  const npEl = document.getElementById('sumNetProfit');
+  npEl.textContent = netProfit.toLocaleString() + ' บาท';
+  npEl.className = 'val ' + (netProfit >= 0 ? 'pos' : 'neg');
+}
+
+// ============ CREDIT TAB ============
+document.getElementById('addCrBtn').onclick = ()=>{
+  const name = document.getElementById('crName').value.trim();
+  const amount = parseFloat(document.getElementById('crAmount').value) || 0;
+  const note = document.getElementById('crNote').value.trim();
+  if(!name || !amount){ alert('กรุณาใส่ชื่อและจำนวนเงิน'); return; }
+  db.ref('credits').push({ name, amount, note, paid:false, timestamp: Date.now() })
+    .then(()=>{
+      document.getElementById('crName').value = '';
+      document.getElementById('crAmount').value = '';
+      document.getElementById('crNote').value = '';
+      showToast('บันทึกแล้ว 🎉');
+    })
+    .catch(err=> alert('บันทึกไม่สำเร็จ: ' + err.message));
+};
+
+function renderCredit(){
+  const list = Object.entries(credits).sort((a,b)=> b[1].timestamp - a[1].timestamp);
+  const unpaidTotal = list.filter(([id,c])=>!c.paid).reduce((s,[id,c])=>s+c.amount,0);
+  document.getElementById('crTotalUnpaid').textContent = unpaidTotal.toLocaleString() + ' บาท';
+
+  const listEl = document.getElementById('crList');
+  if(list.length === 0){
+    listEl.innerHTML = `<div class="empty">ยังไม่มีลูกค้าค้างจ่าย</div>`;
+    return;
+  }
+  listEl.innerHTML = list.map(([id,c])=>{
+    const d = new Date(c.timestamp).toLocaleDateString('th-TH');
+    return `
+    <div class="credit-row ${c.paid?'paid':''}">
+      <div class="cr-top"><span class="cr-name">${c.name}</span><span class="cr-amt">${c.amount.toLocaleString()} บาท</span></div>
+      ${c.note ? `<div class="cr-note">${c.note}</div>` : ''}
+      <div class="cr-foot">
+        <span class="cr-date">${d}</span>
+        ${c.paid ? '<span class="cr-date">✅ จ่ายแล้ว</span>' : `<button class="cr-paybtn" data-id="${id}">จ่ายแล้ว</button>`}
+      </div>
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('.cr-paybtn').forEach(btn=>{
+    btn.onclick = ()=> db.ref('credits/' + btn.dataset.id + '/paid').set(true);
+  });
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
