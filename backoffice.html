@@ -330,8 +330,15 @@ function speakThai(text){
     utter.lang = 'th-TH';
     utter.rate = 0.95;
     utter.volume = 1;
+    const voices = speechSynthesis.getVoices();
+    const thVoice = voices.find(v=> v.lang && v.lang.toLowerCase().startsWith('th'));
+    if(thVoice) utter.voice = thVoice;
     speechSynthesis.speak(utter);
   }catch(e){}
+}
+if('speechSynthesis' in window){
+  speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged = ()=> speechSynthesis.getVoices();
 }
 
 function playDing(){
