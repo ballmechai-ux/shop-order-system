@@ -54,6 +54,25 @@
     font-size:26px;margin:10px 0 2px;color:var(--cream);
     letter-spacing:.3px;
   }
+  .promo-banner{
+    display:none;
+    margin:12px 18px 0;padding:12px 16px;border-radius:14px;
+    background:linear-gradient(135deg, var(--chili), var(--turmeric));
+    color:#fff;font-family:'Kanit',sans-serif;font-weight:700;font-size:14px;
+    align-items:center;gap:10px;
+  }
+  .promo-banner.show{display:flex;}
+  .promo-banner .icon{font-size:20px;flex:0 0 auto;}
+
+  .promo-list-btn{
+    display:none;width:calc(100% - 36px);margin:10px 18px 0;
+    background:linear-gradient(135deg, var(--chili), var(--turmeric));
+    color:#fff;border:none;border-radius:14px;padding:13px 16px;
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:14.5px;
+    align-items:center;justify-content:space-between;
+  }
+  .promo-list-btn.show{display:flex;}
+  .promo-list-btn .chev{font-size:13px;opacity:.85;}
   .sub{color:#9c9284;font-size:13px;margin:0;}
 
   nav.cats{
@@ -112,6 +131,17 @@
   }
   .add-btn:active{transform:scale(.96);}
   .add-btn[disabled]{background:var(--char-2);color:#6b6355;}
+
+  .promo-sheet-card{
+    background:var(--char);border:1px solid var(--line);border-radius:14px;
+    padding:12px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;
+  }
+  .promo-sheet-info{flex:1;min-width:0;}
+  .promo-sheet-name{font-family:'Kanit',sans-serif;font-weight:600;font-size:14.5px;}
+  .promo-sheet-note{font-size:11.5px;color:var(--dim);margin-top:2px;}
+  .promo-sheet-price{margin-top:4px;font-size:13px;}
+  .promo-sheet-price .old{text-decoration:line-through;color:var(--dim);margin-right:6px;}
+  .promo-sheet-price .new{color:var(--turmeric);font-weight:700;font-family:'Kanit',sans-serif;}
 
   /* cart bar */
   .cart-bar{
@@ -181,6 +211,16 @@
   <p class="sub">แตะเพื่อเพิ่มลงตะกร้า แล้วกดยืนยันสั่งอาหาร</p>
 </header>
 
+<div class="promo-banner" id="promoBanner">
+  <span class="icon">📢</span>
+  <span id="promoText"></span>
+</div>
+
+<button class="promo-list-btn" id="promoListBtn">
+  <span>🔥 โปรโมชั่นวันนี้ (<span id="promoCount">0</span> รายการ)</span>
+  <span class="chev">แตะเพื่อดู ▾</span>
+</button>
+
 <nav class="cats" id="catNav"></nav>
 
 <main>
@@ -207,6 +247,16 @@
 </div>
 
 <div class="toast" id="toast">ส่งออเดอร์เรียบร้อย 🎉</div>
+
+<!-- promotions list sheet -->
+<div class="overlay" id="overlayPromo"></div>
+<div class="sheet" id="promoSheet">
+  <div class="sheet-head">
+    <h2>🔥 โปรโมชั่นวันนี้</h2>
+    <button class="sheet-close" id="promoSheetClose">✕</button>
+  </div>
+  <div class="sheet-list" id="promoSheetList"></div>
+</div>
 
 <!-- ===================== Firebase ===================== -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -265,6 +315,18 @@ document.getElementById('callBillBtn').onclick = ()=>{
 let menu = {};
 let activeCat = 'ทั้งหมด';
 let cart = {}; // itemId -> qty
+let promotions = {};
+
+function activePromoForItem(itemId){
+  return Object.values(promotions).find(p => p.itemId === itemId && p.active !== false) || null;
+}
+function getEffectivePrice(id){
+  const item = menu[id];
+  if(!item) return 0;
+  const promo = activePromoForItem(id);
+  if(promo) return Math.max(0, item.price - promo.discount);
+  return item.price;
+}
 
 function loadMenu(){
   if(db){
@@ -311,7 +373,9 @@ function renderMenu(){
       ${!item.available ? `<span class="sold-out-tag">ของหมด</span>` : ''}
       <div class="item-body">
         <div class="item-name">${item.name}</div>
-        <div class="item-price">${item.price} บาท</div>
+        ${activePromoForItem(id)
+          ? `<div class="item-price"><span style="text-decoration:line-through;color:var(--dim);font-weight:400;font-size:12.5px;margin-right:6px;">${item.price}</span>${getEffectivePrice(id)} บาท 🔥</div>`
+          : `<div class="item-price">${item.price} บาท</div>`}
         <div class="item-foot">
           ${qty>0
             ? `<div class="stepper">
@@ -337,7 +401,7 @@ function renderMenu(){
 }
 
 function cartTotal(){
-  return Object.entries(cart).reduce((sum,[id,qty])=> sum + (menu[id]?.price||0)*qty, 0);
+  return Object.entries(cart).reduce((sum,[id,qty])=> sum + getEffectivePrice(id)*qty, 0);
 }
 function cartCount(){
   return Object.values(cart).reduce((a,b)=>a+b,0);
@@ -386,7 +450,7 @@ function renderCartList(){
         <button data-act="inc" data-id="${id}">+</button>
       </div>
       <div class="name">${item.name}</div>
-      <div class="price">${item.price * qty} บาท</div>`;
+      <div class="price">${getEffectivePrice(id) * qty} บาท</div>`;
     list.appendChild(row);
   });
   list.querySelectorAll('[data-act]').forEach(btn=>{
@@ -407,7 +471,7 @@ document.getElementById('confirmBtn').onclick = ()=>{
   if(cartCount() === 0) return;
   const order = {
     table: tableNo,
-    items: Object.entries(cart).map(([id,qty])=>({itemId:id, name:menu[id].name, price:menu[id].price, qty})),
+    items: Object.entries(cart).map(([id,qty])=>({itemId:id, name:menu[id].name, price:getEffectivePrice(id), qty})),
     total: cartTotal(),
     status: 'pending',
     timestamp: Date.now()
@@ -446,6 +510,79 @@ function showToast(){
 }
 
 loadMenu();
+
+if(db){
+  db.ref('settings/promo').on('value', snap=>{
+    const promo = snap.val();
+    const banner = document.getElementById('promoBanner');
+    if(promo && promo.trim()){
+      document.getElementById('promoText').textContent = promo;
+      banner.classList.add('show');
+    } else {
+      banner.classList.remove('show');
+    }
+  });
+
+  db.ref('promotions').on('value', snap=>{
+    promotions = snap.val() || {};
+    const activePromos = Object.values(promotions).filter(p=> p.active !== false);
+    const btn = document.getElementById('promoListBtn');
+    document.getElementById('promoCount').textContent = activePromos.length;
+    btn.classList.toggle('show', activePromos.length > 0);
+    renderMenu(); // refresh prices/strikethrough if menu already loaded
+  });
+}
+
+document.getElementById('promoListBtn').onclick = ()=>{
+  const list = document.getElementById('promoSheetList');
+  const activePromos = Object.entries(promotions).filter(([id,p])=> p.active !== false);
+  if(activePromos.length === 0){
+    list.innerHTML = '<p class="empty-note">ไม่มีโปรโมชั่นตอนนี้</p>';
+  } else {
+    list.innerHTML = activePromos.map(([pid,p])=>{
+      const item = menu[p.itemId];
+      const available = item && item.available !== false;
+      const qty = item ? (cart[p.itemId] || 0) : 0;
+      return `
+      <div class="promo-sheet-card">
+        <div class="promo-sheet-info">
+          <div class="promo-sheet-name">${p.itemName}</div>
+          ${p.note ? `<div class="promo-sheet-note">${p.note}</div>` : ''}
+          <div class="promo-sheet-price"><span class="old">${p.originalPrice}</span><span class="new">${Math.max(0,p.originalPrice-p.discount)} บาท</span></div>
+        </div>
+        ${!item ? '' : !available
+          ? `<span class="sold-out-tag" style="position:static;">ของหมด</span>`
+          : qty>0
+            ? `<div class="stepper">
+                 <button data-promo-act="dec" data-id="${p.itemId}">−</button>
+                 <span class="qty">${qty}</span>
+                 <button data-promo-act="inc" data-id="${p.itemId}">+</button>
+               </div>`
+            : `<button class="add-btn" data-promo-act="inc" data-id="${p.itemId}">เพิ่ม</button>`}
+      </div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-promo-act]').forEach(btn=>{
+      btn.onclick = ()=>{
+        const id = btn.dataset.id;
+        if(btn.dataset.promoAct === 'inc') cart[id] = (cart[id]||0) + 1;
+        else { cart[id] = (cart[id]||0) - 1; if(cart[id]<=0) delete cart[id]; }
+        renderMenu();
+        updateCartBar();
+        document.getElementById('promoListBtn').click(); // re-render sheet list with updated qty
+      };
+    });
+  }
+
+  document.getElementById('overlayPromo').classList.add('show');
+  document.getElementById('promoSheet').classList.add('show');
+};
+function closePromoSheet(){
+  document.getElementById('overlayPromo').classList.remove('show');
+  document.getElementById('promoSheet').classList.remove('show');
+}
+document.getElementById('promoSheetClose').onclick = closePromoSheet;
+document.getElementById('overlayPromo').onclick = closePromoSheet;
 </script>
 </body>
 </html>
