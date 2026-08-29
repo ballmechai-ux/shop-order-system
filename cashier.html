@@ -126,6 +126,20 @@
     #receiptPrint .r-total{font-weight:700;font-size:14px;}
     #receiptPrint .r-center{text-align:center;}
   }
+  #receiptPrint .r-billno{font-weight:700;}
+
+  /* receipt result sheet (after payment) */
+  .receipt-preview-body{background:#fff;color:#1c1712;border-radius:14px;padding:18px;font-family:'Sarabun',sans-serif;font-size:13.5px;}
+  .receipt-preview-body h3{font-family:'Kanit',sans-serif;text-align:center;font-size:16px;margin:0 0 4px;}
+  .receipt-preview-body .rp-center{text-align:center;font-size:12px;color:#5a5248;margin-bottom:8px;}
+  .receipt-preview-body .rp-billno{text-align:center;font-family:'Kanit',sans-serif;font-weight:700;font-size:14px;margin-bottom:10px;color:#c97f1c;}
+  .receipt-preview-body .rp-line{border-top:1px dashed #999;margin:8px 0;}
+  .receipt-preview-body .rp-row{display:flex;justify-content:space-between;padding:3px 0;}
+  .receipt-preview-body .rp-total{font-weight:700;font-size:15px;}
+  .rp-btn-row{display:flex;gap:10px;margin-top:16px;}
+  .rp-btn-row button{flex:1;font-family:'Kanit',sans-serif;font-weight:700;font-size:14px;padding:13px;border-radius:12px;border:none;}
+  .rp-print-btn{background:var(--leaf);color:#12180a;}
+  .rp-close-btn{background:var(--char-2);color:var(--cream);border:1px solid var(--line) !important;}
 </style>
 </head>
 <body>
@@ -133,6 +147,10 @@
 <header>
   <h1>แคชเชียร์</h1>
   <p class="sub"><span class="live-dot"></span> อัปเดตเรียลไทม์ · <span id="soundStatus">🔕 แตะหน้าจอเพื่อเปิดเสียงเตือน</span></p>
+  <div style="display:flex;gap:6px;margin-bottom:10px;">
+    <input type="text" id="customVoiceText" placeholder="พิมพ์ข้อความให้พูด..." style="flex:1;background:var(--char);border:1px solid var(--line);border-radius:8px;color:var(--cream);font-size:12.5px;padding:7px 10px;">
+    <button id="speakCustomBtn" style="font-family:'Kanit',sans-serif;font-size:12px;font-weight:600;background:var(--turmeric);color:#241a06;border:none;padding:0 14px;border-radius:8px;">🗣️ พูด</button>
+  </div>
   <div class="tabbar">
     <button class="tab-btn active" data-tab="open">💰 โต๊ะค้างชำระ</button>
     <button class="tab-btn" data-tab="history">🧾 ประวัติบิล</button>
@@ -195,6 +213,31 @@
 
 <div class="toast" id="toast">ปิดโต๊ะเรียบร้อย 🎉</div>
 
+<!-- receipt result sheet: shown right after successful payment -->
+<div class="overlay" id="overlayReceiptResult"></div>
+<div class="sheet" id="receiptResultSheet">
+  <div class="sheet-head">
+    <h2>ชำระเงินสำเร็จ ✅</h2>
+    <button class="sheet-close" id="receiptResultClose">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="receipt-preview-body">
+      <h3 id="rpShopName">ร้านค้า</h3>
+      <div class="rp-center" id="rpShopMeta"></div>
+      <div class="rp-billno" id="rpBillNo"></div>
+      <div class="rp-line"></div>
+      <div id="rpItems"></div>
+      <div class="rp-line"></div>
+      <div class="rp-row rp-total"><span>รวม</span><span id="rpTotal"></span></div>
+      <div class="rp-row"><span id="rpPayLabel"></span><span id="rpPayVal"></span></div>
+    </div>
+    <div class="rp-btn-row">
+      <button class="rp-close-btn" id="rpCloseBtn">ปิด (ไม่พิมพ์)</button>
+      <button class="rp-print-btn" id="rpPrintBtn">🖨️ พิมพ์ใบเสร็จ</button>
+    </div>
+  </div>
+</div>
+
 <!-- printable receipt template -->
 <div id="receiptPrint">
   <h2 id="rShopName">ร้านค้า</h2>
@@ -202,6 +245,7 @@
   <div class="r-center" id="rShopPhone"></div>
   <div class="r-line"></div>
   <div class="r-row"><span id="rDate"></span><span id="rTable"></span></div>
+  <div class="r-row r-billno"><span>เลขที่บิล</span><span id="rBillNo"></span></div>
   <div class="r-line"></div>
   <div id="rItems"></div>
   <div class="r-line"></div>
@@ -282,10 +326,12 @@ if('speechSynthesis' in window){
     }
   }, 5000);
 }
-if('speechSynthesis' in window){
-  speechSynthesis.getVoices();
-  speechSynthesis.onvoiceschanged = ()=> speechSynthesis.getVoices();
-}
+
+document.getElementById('speakCustomBtn').onclick = ()=>{
+  const text = document.getElementById('customVoiceText').value.trim();
+  if(!text){ alert('พิมพ์ข้อความก่อนครับ'); return; }
+  speakThai(text);
+};
 
 // ============ bill requests ============
 let billRequests = {};
@@ -475,14 +521,49 @@ document.getElementById('confirmPayBtn').onclick = ()=>{
   currentOrderIds.forEach(id=>{ updates['orders/' + id + '/status'] = 'paid'; });
 
   db.ref().update(updates)
-    .then(()=> db.ref('bills').push(billRecord))
+    .then(()=> db.ref('billCounter').transaction(cur => (cur || 0) + 1))
+    .then((result)=>{
+      const billNo = result.snapshot.val();
+      billRecord.billNo = billNo;
+      return db.ref('bills').push(billRecord);
+    })
     .then(()=>{
-      printReceipt(billRecord);
       closeBill();
+      showReceiptResult(billRecord);
       showToast('ปิดโต๊ะเรียบร้อย 🎉');
     })
     .catch(err=> alert('ปิดโต๊ะไม่สำเร็จ: ' + err.message));
 };
+
+// ============ receipt result (shown right after payment) ============
+function showReceiptResult(bill){
+  document.getElementById('rpShopName').textContent = shopInfo.shopName || 'ร้านค้า';
+  const metaBits = [shopInfo.address, shopInfo.phone].filter(Boolean);
+  document.getElementById('rpShopMeta').textContent = metaBits.join(' · ');
+  document.getElementById('rpBillNo').textContent = 'เลขที่บิล #' + String(bill.billNo).padStart(4,'0') + '  ·  โต๊ะ ' + bill.table;
+  document.getElementById('rpItems').innerHTML = bill.items.map(it=>`
+    <div class="rp-row"><span>${it.name} x${it.qty}</span><span>${it.price*it.qty} บาท</span></div>`).join('');
+  document.getElementById('rpTotal').textContent = bill.total.toLocaleString() + ' บาท';
+  if(bill.payMethod === 'cash'){
+    document.getElementById('rpPayLabel').textContent = 'รับเงิน / ทอน';
+    document.getElementById('rpPayVal').textContent = bill.cashReceived + ' / ' + bill.change + ' บาท';
+  } else {
+    document.getElementById('rpPayLabel').textContent = 'ชำระโดย';
+    document.getElementById('rpPayVal').textContent = 'โอนเงิน';
+  }
+
+  document.getElementById('rpPrintBtn').onclick = ()=> printReceipt(bill);
+  const closeResult = ()=>{
+    document.getElementById('overlayReceiptResult').classList.remove('show');
+    document.getElementById('receiptResultSheet').classList.remove('show');
+  };
+  document.getElementById('rpCloseBtn').onclick = closeResult;
+  document.getElementById('receiptResultClose').onclick = closeResult;
+  document.getElementById('overlayReceiptResult').onclick = closeResult;
+
+  document.getElementById('overlayReceiptResult').classList.add('show');
+  document.getElementById('receiptResultSheet').classList.add('show');
+}
 
 // ============ receipt printing ============
 function printReceipt(bill){
@@ -492,6 +573,7 @@ function printReceipt(bill){
   const d = new Date(bill.timestamp);
   document.getElementById('rDate').textContent = d.toLocaleString('th-TH');
   document.getElementById('rTable').textContent = 'โต๊ะ ' + bill.table;
+  document.getElementById('rBillNo').textContent = '#' + String(bill.billNo || 0).padStart(4,'0');
   document.getElementById('rItems').innerHTML = bill.items.map(it=>`
     <div class="r-row"><span>${it.name} x${it.qty}</span><span>${it.price*it.qty}</span></div>`).join('');
   document.getElementById('rTotal').textContent = bill.total + ' บาท';
