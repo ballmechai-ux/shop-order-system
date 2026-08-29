@@ -168,7 +168,9 @@
 <div class="tab-panel" id="panel-settings">
   <main class="settings-main">
     <div class="settings-card">
-      <div class="field"><label>ชื่อร้าน</label><input type="text" id="setShopName" placeholder="เช่น ร้านบ้านนา"></div>
+      <div class="field"><label>ชื่อเจ้าของกิจการ</label><input type="text" id="setOwnerName" placeholder="ชื่อ-นามสกุลเจ้าของร้าน"></div>
+      <div class="field"><label>เลขประจำตัวประชาชน</label><input type="text" id="setIdCard" placeholder="เลข 13 หลัก"></div>
+      <div class="field"><label>ชื่อร้าน / สถานประกอบการ</label><input type="text" id="setShopName" placeholder="เช่น ร้านบ้านนา"></div>
       <div class="field"><label>ที่อยู่</label><input type="text" id="setAddress" placeholder="ที่อยู่ร้าน"></div>
       <div class="field"><label>เบอร์โทร</label><input type="text" id="setPhone" placeholder="เบอร์ติดต่อร้าน"></div>
       <div class="field"><label>เลขประจำตัวผู้เสียภาษี (ถ้ามี)</label><input type="text" id="setTaxId" placeholder="เลข 13 หลัก"></div>
@@ -560,6 +562,8 @@ document.getElementById('deleteBtn').onclick = ()=>{
 // ================= SETTINGS TAB =================
 db.ref('settings').on('value', snap=>{
   const s = snap.val() || {};
+  document.getElementById('setOwnerName').value = s.ownerName || '';
+  document.getElementById('setIdCard').value = s.idCard || '';
   document.getElementById('setShopName').value = s.shopName || '';
   document.getElementById('setAddress').value = s.address || '';
   document.getElementById('setPhone').value = s.phone || '';
@@ -569,6 +573,8 @@ db.ref('settings').on('value', snap=>{
 
 document.getElementById('saveSettingsBtn').onclick = ()=>{
   const data = {
+    ownerName: document.getElementById('setOwnerName').value.trim(),
+    idCard: document.getElementById('setIdCard').value.trim(),
     shopName: document.getElementById('setShopName').value.trim(),
     address: document.getElementById('setAddress').value.trim(),
     phone: document.getElementById('setPhone').value.trim(),

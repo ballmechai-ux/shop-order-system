@@ -125,6 +125,7 @@
       <button class="tab-btn" data-tab="expenses">💸 รายจ่าย</button>
       <button class="tab-btn" data-tab="summary">📒 สรุปรวม</button>
       <button class="tab-btn" data-tab="credit">🧍 ลูกค้าค้างจ่าย</button>
+      <button class="tab-btn" data-tab="taxreport">📄 รายงานสรรพากร</button>
     </div>
   </header>
 
@@ -199,6 +200,52 @@
     <div class="section-title">ยอดค้างทั้งหมด: <span id="crTotalUnpaid">0 บาท</span></div>
     <div id="crList"></div>
   </div>
+
+  <!-- TAX REPORT TAB -->
+  <div class="tab-panel" id="panel-taxreport">
+    <div class="date-range">
+      <select id="taxMonth" style="flex:1;background:var(--char);border:1px solid var(--line);border-radius:10px;color:var(--cream);padding:9px 10px;font-size:13px;"></select>
+      <select id="taxYear" style="flex:1;background:var(--char);border:1px solid var(--line);border-radius:10px;color:var(--cream);padding:9px 10px;font-size:13px;"></select>
+    </div>
+    <button class="add-exp-btn" id="genTaxReportBtn" style="margin-bottom:14px;">สร้างรายงาน</button>
+    <div id="taxReportPreview"></div>
+    <button class="add-exp-btn" id="printTaxReportBtn" style="display:none;margin-top:10px;background:var(--leaf);color:#12180a;">🖨️ พิมพ์รายงาน</button>
+  </div>
+</div>
+
+<!-- printable tax report (hidden until print) -->
+<div id="taxPrintArea" style="display:none;">
+  <style>
+    @media print{
+      body *{ visibility:hidden; }
+      #taxPrintArea, #taxPrintArea *{ visibility:visible; }
+      #taxPrintArea{ display:block !important; position:fixed; left:0; top:0; width:100%; background:#fff; color:#000; font-family:'Sarabun',sans-serif; padding:16px; font-size:12px; }
+      #taxPrintArea h2{ text-align:center; font-family:'Kanit',sans-serif; font-size:16px; margin:0 0 10px; }
+      #taxPrintArea table{ width:100%; border-collapse:collapse; font-size:11px; }
+      #taxPrintArea th, #taxPrintArea td{ border:1px solid #000; padding:3px 5px; }
+      #taxPrintArea th{ background:#eee; }
+      #taxPrintArea .hdr-line{ margin-bottom:4px; }
+      #taxPrintArea .totals-row{ font-weight:700; background:#f5f5f5; }
+    }
+  </style>
+  <h2>เอกสารบันทึกรายการ รับ-จ่าย</h2>
+  <div class="hdr-line">ชื่อเจ้าของกิจการ: <span id="tpOwner"></span> &nbsp;&nbsp; เลขประจำตัวประชาชน: <span id="tpIdCard"></span></div>
+  <div class="hdr-line">ชื่อสถานประกอบการ: <span id="tpShop"></span> &nbsp;&nbsp; เลขประจำตัวผู้เสียภาษี: <span id="tpTaxId"></span></div>
+  <div class="hdr-line">ที่อยู่: <span id="tpAddress"></span> &nbsp;&nbsp; เบอร์โทรศัพท์: <span id="tpPhone"></span></div>
+  <div class="hdr-line">ประจำเดือน: <span id="tpMonthLabel"></span></div>
+  <table>
+    <thead>
+      <tr>
+        <th>วันที่</th>
+        <th>รายการ</th>
+        <th>รายรับ</th>
+        <th>รายจ่าย<br>(ต้นทุนสินค้า)</th>
+        <th>รายจ่าย<br>(ค่าใช้จ่ายอื่นๆ)</th>
+        <th>หมายเหตุ</th>
+      </tr>
+    </thead>
+    <tbody id="tpTableBody"></tbody>
+  </table>
 </div>
 
 <div class="toast" id="toast">บันทึกแล้ว 🎉</div>
@@ -324,6 +371,7 @@ function renderActiveTab(){
   else if(active.id === 'panel-expenses') renderExpenses();
   else if(active.id === 'panel-summary') renderSummary();
   else if(active.id === 'panel-credit') renderCredit();
+  else if(active.id === 'panel-taxreport') initTaxReportControls();
 }
 
 function inRange(dateStr, start, end){
@@ -501,6 +549,121 @@ function showToast(msg){
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(()=> t.classList.remove('show'), 2000);
+}
+
+// ============ TAX REPORT TAB ============
+let shopSettings = {};
+db.ref('settings').on('value', snap=>{ shopSettings = snap.val() || {}; });
+
+const thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+let taxControlsInit = false;
+function initTaxReportControls(){
+  if(taxControlsInit) return;
+  taxControlsInit = true;
+  const monthSel = document.getElementById('taxMonth');
+  const yearSel = document.getElementById('taxYear');
+  thaiMonths.forEach((m,i)=>{
+    const opt = document.createElement('option');
+    opt.value = i+1; opt.textContent = m;
+    monthSel.appendChild(opt);
+  });
+  const now = new Date();
+  monthSel.value = now.getMonth()+1;
+  const thisYearBE = now.getFullYear() + 543;
+  for(let y = thisYearBE; y >= thisYearBE-3; y--){
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = 'พ.ศ. ' + y;
+    yearSel.appendChild(opt);
+  }
+  document.getElementById('genTaxReportBtn').onclick = generateTaxReport;
+  document.getElementById('printTaxReportBtn').onclick = ()=> window.print();
+}
+
+function generateTaxReport(){
+  const month = parseInt(document.getElementById('taxMonth').value);
+  const yearBE = parseInt(document.getElementById('taxYear').value);
+  const yearCE = yearBE - 543;
+  const daysInMonth = new Date(yearCE, month, 0).getDate();
+
+  const rows = [];
+  let totalRevenue = 0, totalCogs = 0, totalOther = 0;
+
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = yearCE + '-' + String(month).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const dayBills = Object.values(bills).filter(b=> b.dateStr === dateStr);
+    const dayExp = Object.values(expenses).filter(e=> e.dateStr === dateStr);
+
+    if(dayBills.length === 0 && dayExp.length === 0) continue;
+
+    let revenue = 0, cogs = 0;
+    dayBills.forEach(b=>{
+      revenue += b.total || 0;
+      (b.items||[]).forEach(it=>{
+        const cost = (menu[it.itemId] && menu[it.itemId].cost) || 0;
+        cogs += cost * it.qty;
+      });
+    });
+    const otherExpense = dayExp.reduce((s,e)=>s+e.amount,0);
+
+    totalRevenue += revenue;
+    totalCogs += cogs;
+    totalOther += otherExpense;
+
+    const dLabel = String(d).padStart(2,'0') + '/' + String(month).padStart(2,'0') + '/' + yearBE;
+    const desc = dayBills.length ? 'ขายสินค้า (' + dayBills.length + ' บิล)' : '';
+    rows.push({ date: dLabel, desc, revenue, cogs, otherExpense });
+  }
+
+  renderTaxPreview(rows, totalRevenue, totalCogs, totalOther, month, yearBE);
+  buildPrintArea(rows, totalRevenue, totalCogs, totalOther, month, yearBE);
+  document.getElementById('printTaxReportBtn').style.display = rows.length ? 'block' : 'none';
+}
+
+function renderTaxPreview(rows, totalRevenue, totalCogs, totalOther, month, yearBE){
+  const el = document.getElementById('taxReportPreview');
+  if(rows.length === 0){
+    el.innerHTML = `<div class="empty">ไม่มีข้อมูลในเดือนนี้</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="lbl">รายรับรวม</div><div class="val pos">${totalRevenue.toLocaleString()} บาท</div></div>
+      <div class="stat-card"><div class="lbl">รายจ่ายรวม</div><div class="val neg">${(totalCogs+totalOther).toLocaleString()} บาท</div></div>
+      <div class="stat-card wide"><div class="lbl">จำนวนวันที่มีรายการ</div><div class="val">${rows.length} วัน</div></div>
+    </div>
+    <div class="section-title">ตัวอย่างรายวัน (ดูฉบับเต็มตอนพิมพ์)</div>
+    ${rows.slice(0,5).map(r=>`
+      <div class="top-item-row"><span>${r.date} ${r.desc}</span><span>รับ ${r.revenue.toLocaleString()} / จ่าย ${(r.cogs+r.otherExpense).toLocaleString()}</span></div>`).join('')}
+    ${rows.length > 5 ? `<div class="empty">...และอีก ${rows.length-5} วัน (ดูครบในหน้าพิมพ์)</div>` : ''}
+  `;
+}
+
+function buildPrintArea(rows, totalRevenue, totalCogs, totalOther, month, yearBE){
+  document.getElementById('tpOwner').textContent = shopSettings.ownerName || '-';
+  document.getElementById('tpIdCard').textContent = shopSettings.idCard || '-';
+  document.getElementById('tpShop').textContent = shopSettings.shopName || '-';
+  document.getElementById('tpTaxId').textContent = shopSettings.taxId || '-';
+  document.getElementById('tpAddress').textContent = shopSettings.address || '-';
+  document.getElementById('tpPhone').textContent = shopSettings.phone || '-';
+  document.getElementById('tpMonthLabel').textContent = thaiMonths[month-1] + ' พ.ศ. ' + yearBE;
+
+  const body = document.getElementById('tpTableBody');
+  body.innerHTML = rows.map(r=>`
+    <tr>
+      <td>${r.date}</td>
+      <td>${r.desc}</td>
+      <td>${r.revenue ? r.revenue.toLocaleString() : ''}</td>
+      <td>${r.cogs ? r.cogs.toLocaleString() : ''}</td>
+      <td>${r.otherExpense ? r.otherExpense.toLocaleString() : ''}</td>
+      <td></td>
+    </tr>`).join('') + `
+    <tr class="totals-row">
+      <td colspan="2">รวมทั้งเดือน</td>
+      <td>${totalRevenue.toLocaleString()}</td>
+      <td>${totalCogs.toLocaleString()}</td>
+      <td>${totalOther.toLocaleString()}</td>
+      <td></td>
+    </tr>`;
 }
 
 if('serviceWorker' in navigator){
