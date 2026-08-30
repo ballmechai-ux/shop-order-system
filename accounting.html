@@ -91,6 +91,11 @@
   .cr-paybtn{font-family:'Kanit',sans-serif;font-weight:600;font-size:12px;background:var(--leaf);color:#12180a;border:none;padding:6px 14px;border-radius:8px;}
 
   .empty{text-align:center;color:var(--dim);padding:40px 20px;font-size:13.5px;}
+  .audit-bill-row{background:var(--char);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+  .audit-bill-left{flex:1;min-width:0;}
+  .audit-bill-no{font-family:'Kanit',sans-serif;font-weight:700;font-size:13.5px;color:var(--turmeric);}
+  .audit-bill-meta{font-size:11.5px;color:var(--dim);margin-top:2px;}
+  .audit-bill-total{font-family:'Kanit',sans-serif;font-weight:700;font-size:14.5px;}
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-40px);background:var(--leaf);color:#12180a;font-family:'Kanit',sans-serif;font-weight:600;padding:10px 20px;border-radius:999px;font-size:13px;z-index:60;opacity:0;transition:all .25s ease;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
@@ -144,6 +149,7 @@
       <button class="tab-btn" data-tab="summary">📒 สรุปรวม</button>
       <button class="tab-btn" data-tab="credit">🧍 ลูกค้าค้างจ่าย</button>
       <button class="tab-btn" data-tab="taxreport">📄 รายงานสรรพากร</button>
+      <button class="tab-btn" data-tab="audit">🔍 ตรวจสอบบิล</button>
     </div>
   </header>
 
@@ -276,6 +282,61 @@
     <div id="taxReportPreview"></div>
     <button class="add-exp-btn" id="printTaxReportBtn" style="display:none;margin-top:10px;background:var(--leaf);color:#12180a;">🖨️ พิมพ์รายงาน</button>
   </div>
+
+  <!-- BILL AUDIT TAB -->
+  <div class="tab-panel" id="panel-audit">
+    <div class="quick-range" id="quickRangeAudit"></div>
+    <div class="date-range">
+      <input type="date" id="auditStart">
+      <input type="date" id="auditEnd">
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="lbl">จำนวนบิล</div><div class="val" id="auditBillCount">0</div></div>
+      <div class="stat-card"><div class="lbl">ยอดขายรวม</div><div class="val" id="auditBillTotal">0 บาท</div></div>
+    </div>
+    <div id="auditBillList"></div>
+    <button class="delete-btn" id="deleteAllBillsBtn" style="margin-top:18px;">🗑️ ลบข้อมูลบิลทั้งหมด</button>
+  </div>
+</div>
+
+<!-- audit bill preview sheet -->
+<div class="overlay" id="auditPreviewOverlay"></div>
+<div class="sheet" id="auditPreviewSheet">
+  <div class="sheet-head">
+    <h2>ตัวอย่างบิล</h2>
+    <button class="sheet-close" id="auditPreviewClose">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div id="auditPrintArea" style="background:#fff;color:#000;border-radius:14px;padding:16px;">
+      <style>
+        #auditPrintArea h3{ text-align:center; font-family:'Kanit',sans-serif; font-size:16px; margin:0 0 4px; color:#000; }
+        #auditPrintArea .ap-center{ text-align:center; font-size:12px; color:#555; margin-bottom:8px; }
+        #auditPrintArea .ap-billno{ text-align:center; font-family:'Kanit',sans-serif; font-weight:700; font-size:14px; margin-bottom:10px; color:#c97f1c; }
+        #auditPrintArea .ap-line{ border-top:1px dashed #999; margin:8px 0; }
+        #auditPrintArea .ap-row{ display:flex; justify-content:space-between; padding:3px 0; font-size:13.5px; }
+        #auditPrintArea .ap-total{ font-weight:700; font-size:15px; }
+        @media print{
+          body.printing-audit *{ visibility:hidden; }
+          body.printing-audit #auditPrintArea, body.printing-audit #auditPrintArea *{ visibility:visible; }
+          body.printing-audit #auditPrintArea{ position:fixed; left:0; top:0; width:100%; padding:20px; border-radius:0; }
+          .preview-btn-row, .sheet-head{ display:none !important; }
+        }
+      </style>
+      <h3 id="apShopName">ร้านค้า</h3>
+      <div class="ap-center" id="apShopMeta"></div>
+      <div class="ap-billno" id="apBillNo"></div>
+      <div class="ap-line"></div>
+      <div id="apItems"></div>
+      <div class="ap-line"></div>
+      <div class="ap-row ap-total"><span>รวม</span><span id="apTotal"></span></div>
+      <div class="ap-row"><span id="apPayLabel"></span><span id="apPayVal"></span></div>
+    </div>
+    <div class="preview-btn-row">
+      <button class="preview-close-btn" id="auditPreviewCloseBtn">ปิด</button>
+      <button class="preview-print-btn" id="auditPreviewPrintBtn">🖨️ พิมพ์</button>
+    </div>
+    <button class="delete-btn" id="auditDeleteBillBtn" style="margin-top:10px;">🗑️ ลบบิลนี้</button>
+  </div>
 </div>
 
 <!-- printable tax report (hidden until print) -->
@@ -378,7 +439,7 @@ function initApp(){
   db.ref('credits').on('value', snap=>{ credits = snap.val() || {}; renderActiveTab(); });
 
   const today = new Date().toISOString().slice(0,10);
-  ['salesStart','salesEnd','expStart','expEnd','sumStart','sumEnd'].forEach(id=>{
+  ['salesStart','salesEnd','expStart','expEnd','sumStart','sumEnd','auditStart','auditEnd'].forEach(id=>{
     document.getElementById(id).value = today;
   });
   document.getElementById('expDate').value = today;
@@ -386,10 +447,12 @@ function initApp(){
   buildQuickRange('quickRangeSales', ['salesStart','salesEnd'], renderSales);
   buildQuickRange('quickRangeExp', ['expStart','expEnd'], renderExpenses);
   buildQuickRange('quickRangeSummary', ['sumStart','sumEnd'], renderSummary);
+  buildQuickRange('quickRangeAudit', ['auditStart','auditEnd'], renderAuditTab);
 
   ['salesStart','salesEnd'].forEach(id=> document.getElementById(id).onchange = renderSales);
   ['expStart','expEnd'].forEach(id=> document.getElementById(id).onchange = renderExpenses);
   ['sumStart','sumEnd'].forEach(id=> document.getElementById(id).onchange = renderSummary);
+  ['auditStart','auditEnd'].forEach(id=> document.getElementById(id).onchange = renderAuditTab);
 
   renderActiveTab();
 }
@@ -437,6 +500,7 @@ function renderActiveTab(){
   else if(active.id === 'panel-summary') renderSummary();
   else if(active.id === 'panel-credit') renderCredit();
   else if(active.id === 'panel-taxreport') initTaxReportControls();
+  else if(active.id === 'panel-audit') renderAuditTab();
 }
 
 function inRange(dateStr, start, end){
@@ -509,7 +573,7 @@ document.getElementById('salesPreviewClose').onclick = closeSalesPreview;
 document.getElementById('salesPreviewCloseBtn').onclick = closeSalesPreview;
 document.getElementById('salesPreviewOverlay').onclick = closeSalesPreview;
 document.getElementById('salesPreviewPrintBtn').onclick = ()=>{
-  document.body.classList.remove('printing-sales', 'printing-tax');
+  document.body.classList.remove('printing-sales', 'printing-tax', 'printing-audit');
   document.body.classList.add('printing-sales');
   window.print();
 };
@@ -645,6 +709,109 @@ function renderCredit(){
   });
 }
 
+// ============ BILL AUDIT TAB ============
+function renderAuditTab(){
+  const start = document.getElementById('auditStart').value;
+  const end = document.getElementById('auditEnd').value;
+  const list = Object.entries(bills)
+    .filter(([id,b])=> inRange(b.dateStr, start, end))
+    .sort((a,b)=> b[1].timestamp - a[1].timestamp);
+
+  document.getElementById('auditBillCount').textContent = list.length;
+  document.getElementById('auditBillTotal').textContent = list.reduce((s,[id,b])=>s+(b.total||0),0).toLocaleString() + ' บาท';
+
+  const listEl = document.getElementById('auditBillList');
+  if(list.length === 0){
+    listEl.innerHTML = `<div class="empty">ไม่มีบิลในช่วงนี้</div>`;
+    return;
+  }
+  listEl.innerHTML = list.map(([id,b])=>{
+    const d = new Date(b.timestamp);
+    const dt = d.toLocaleDateString('th-TH') + ' ' + d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+    return `
+    <div class="audit-bill-row" data-id="${id}">
+      <div class="audit-bill-left">
+        <div class="audit-bill-no">#${String(b.billNo||0).padStart(4,'0')} · โต๊ะ ${b.table}</div>
+        <div class="audit-bill-meta">${dt} · ${b.payMethod==='cash'?'เงินสด':'โอนเงิน'} · ${(b.items||[]).length} รายการ</div>
+      </div>
+      <div class="audit-bill-total">${(b.total||0).toLocaleString()} บาท</div>
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('.audit-bill-row').forEach(row=>{
+    row.onclick = ()=> openAuditPreview(row.dataset.id, bills[row.dataset.id]);
+  });
+}
+
+let currentAuditBillId = null;
+let currentAuditBill = null;
+
+function openAuditPreview(id, bill){
+  currentAuditBillId = id;
+  currentAuditBill = bill;
+
+  document.getElementById('apShopName').textContent = shopSettingsForPrint.shopName || 'ร้านค้า';
+  const metaBits = [shopSettingsForPrint.address, shopSettingsForPrint.phone].filter(Boolean);
+  document.getElementById('apShopMeta').textContent = metaBits.join(' · ');
+  document.getElementById('apBillNo').textContent = 'เลขที่บิล #' + String(bill.billNo||0).padStart(4,'0') + '  ·  โต๊ะ ' + bill.table;
+  document.getElementById('apItems').innerHTML = (bill.items||[]).map(it=>`
+    <div class="ap-row"><span>${it.name} x${it.qty}</span><span>${it.price*it.qty} บาท</span></div>`).join('');
+  document.getElementById('apTotal').textContent = (bill.total||0).toLocaleString() + ' บาท';
+  if(bill.payMethod === 'cash'){
+    document.getElementById('apPayLabel').textContent = 'รับเงิน / ทอน';
+    document.getElementById('apPayVal').textContent = (bill.cashReceived||0) + ' / ' + (bill.change||0) + ' บาท';
+  } else {
+    document.getElementById('apPayLabel').textContent = 'ชำระโดย';
+    document.getElementById('apPayVal').textContent = 'โอนเงิน';
+  }
+
+  document.getElementById('auditPreviewOverlay').classList.add('show');
+  document.getElementById('auditPreviewSheet').classList.add('show');
+}
+
+function closeAuditPreview(){
+  document.getElementById('auditPreviewOverlay').classList.remove('show');
+  document.getElementById('auditPreviewSheet').classList.remove('show');
+}
+document.getElementById('auditPreviewClose').onclick = closeAuditPreview;
+document.getElementById('auditPreviewCloseBtn').onclick = closeAuditPreview;
+document.getElementById('auditPreviewOverlay').onclick = closeAuditPreview;
+
+document.getElementById('auditPreviewPrintBtn').onclick = ()=>{
+  document.body.classList.remove('printing-sales', 'printing-tax', 'printing-audit');
+  document.body.classList.add('printing-audit');
+  window.print();
+};
+
+function confirmWithPin(actionLabel){
+  if(!confirm(actionLabel + ' — ยืนยันหรือไม่? การลบไม่สามารถกู้คืนได้')) return false;
+  const pin = prompt('ใส่รหัส 4 หลักเพื่อยืนยันการลบ');
+  if(pin === null) return false;
+  if(pin !== ADMIN_PIN){
+    alert('รหัสไม่ถูกต้อง ยกเลิกการลบ');
+    return false;
+  }
+  return true;
+}
+
+document.getElementById('auditDeleteBillBtn').onclick = ()=>{
+  if(!currentAuditBillId) return;
+  if(!confirmWithPin('ลบบิล #' + String(currentAuditBill.billNo||0).padStart(4,'0'))) return;
+  db.ref('bills/' + currentAuditBillId).remove()
+    .then(()=>{
+      closeAuditPreview();
+      showToast('ลบบิลแล้ว');
+    })
+    .catch(err=> alert('ลบไม่สำเร็จ: ' + err.message));
+};
+
+document.getElementById('deleteAllBillsBtn').onclick = ()=>{
+  if(!confirmWithPin('ลบข้อมูลบิลทั้งหมดในระบบ (ทุกวัน ไม่ใช่แค่ช่วงที่เลือก)')) return;
+  db.ref('bills').remove()
+    .then(()=> showToast('ลบข้อมูลบิลทั้งหมดแล้ว'))
+    .catch(err=> alert('ลบไม่สำเร็จ: ' + err.message));
+};
+
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -653,7 +820,7 @@ function showToast(msg){
 }
 
 window.addEventListener('afterprint', ()=>{
-  document.body.classList.remove('printing-sales', 'printing-tax');
+  document.body.classList.remove('printing-sales', 'printing-tax', 'printing-audit');
 });
 
 // ============ TAX REPORT TAB ============
@@ -682,7 +849,7 @@ function initTaxReportControls(){
   }
   document.getElementById('genTaxReportBtn').onclick = generateTaxReport;
   document.getElementById('printTaxReportBtn').onclick = ()=>{
-    document.body.classList.remove('printing-sales', 'printing-tax');
+    document.body.classList.remove('printing-sales', 'printing-tax', 'printing-audit');
     document.body.classList.add('printing-tax');
     window.print();
   };
