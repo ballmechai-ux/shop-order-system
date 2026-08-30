@@ -581,6 +581,37 @@ document.getElementById('promoListBtn').onclick = ()=>{
     list.innerHTML = '<p class="empty-note">ไม่มีโปรโมชั่นตอนนี้</p>';
   } else {
     list.innerHTML = activePromos.map(([pid,p])=>{
+      if(p.type === 'bundle'){
+        const names = (p.itemNames || []).join(', ');
+        const eligibleRows = (p.itemIds || []).map(id=>{
+          const item = menu[id];
+          if(!item) return '';
+          const available = item.available !== false;
+          const qty = cart[id] || 0;
+          return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px dashed var(--line);">
+            <span style="font-size:13px;">${item.name} (${item.price} บาท)</span>
+            ${!available
+              ? `<span class="sold-out-tag" style="position:static;">ของหมด</span>`
+              : qty>0
+                ? `<div class="stepper">
+                     <button data-promo-act="dec" data-id="${id}">−</button>
+                     <span class="qty">${qty}</span>
+                     <button data-promo-act="inc" data-id="${id}">+</button>
+                   </div>`
+                : `<button class="add-btn" data-promo-act="inc" data-id="${id}">เพิ่ม</button>`}
+          </div>`;
+        }).join('');
+        return `
+        <div class="promo-sheet-card" style="flex-direction:column;align-items:stretch;">
+          <div class="promo-sheet-info">
+            <div class="promo-sheet-name">🎁 ซื้อครบ ${p.requiredCount} ชิ้น จาก: ${names}</div>
+            ${p.note ? `<div class="promo-sheet-note">${p.note}</div>` : ''}
+            <div class="promo-sheet-price"><span class="new">ลด ${p.discount} บาท ต่อชุด</span></div>
+          </div>
+          ${eligibleRows}
+        </div>`;
+      }
       const item = menu[p.itemId];
       const available = item && item.available !== false;
       const qty = item ? (cart[p.itemId] || 0) : 0;
