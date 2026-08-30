@@ -135,6 +135,22 @@
   /* ---- settings tab ---- */
   .settings-card{background:var(--char);border:1px solid var(--line);border-radius:16px;padding:18px;}
   .settings-card .field{margin-bottom:16px;}
+  .promo-item-card{
+    background:var(--char);border:1px solid var(--line);border-radius:14px;
+    padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;
+  }
+  .promo-item-info{flex:1;min-width:0;}
+  .promo-item-name{font-family:'Kanit',sans-serif;font-weight:600;font-size:14px;}
+  .promo-item-price{font-size:12.5px;color:var(--dim);margin-top:2px;}
+  .promo-item-price .old{text-decoration:line-through;margin-right:6px;}
+  .promo-item-price .new{color:var(--turmeric);font-weight:700;}
+  .promo-item-actions{display:flex;gap:6px;}
+  .promo-toggle-btn{font-family:'Kanit',sans-serif;font-weight:600;font-size:11px;padding:5px 10px;border-radius:999px;border:none;}
+  .promo-toggle-btn.on{background:rgba(122,154,74,.2);color:#a9c97f;}
+  .promo-toggle-btn.off{background:rgba(156,146,132,.2);color:var(--dim);}
+  .promo-del-btn{background:none;border:none;color:var(--dim);font-size:15px;}
+  .promo-bundle-check{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13.5px;}
+  .promo-bundle-check input{width:16px;height:16px;}
 
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-40px);background:var(--leaf);color:#12180a;font-family:'Kanit',sans-serif;font-weight:600;padding:10px 20px;border-radius:999px;font-size:13px;z-index:60;opacity:0;transition:all .25s ease;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -144,7 +160,11 @@
 
 <header>
   <h1>หลังร้าน</h1>
-  <p class="sub"><span class="live-dot"></span> อัปเดตแบบเรียลไทม์ · <span id="soundStatus">🔕 แตะหน้าจอเพื่อเปิดเสียงเตือน</span> · <button id="testVoiceBtn" style="font-family:'Kanit',sans-serif;font-size:11px;background:var(--char);color:var(--dim);border:1px solid var(--line);padding:3px 9px;border-radius:999px;">🗣️ ทดสอบเสียงพูด</button></p>
+  <p class="sub"><span class="live-dot"></span> อัปเดตแบบเรียลไทม์ · <span id="soundStatus">🔕 แตะหน้าจอเพื่อเปิดเสียงเตือน</span></p>
+  <div style="display:flex;gap:6px;margin-bottom:10px;">
+    <input type="text" id="customVoiceText" placeholder="พิมพ์ข้อความให้พูด..." style="flex:1;background:var(--char);border:1px solid var(--line);border-radius:8px;color:var(--cream);font-size:12.5px;padding:7px 10px;">
+    <button id="speakCustomBtn" style="font-family:'Kanit',sans-serif;font-size:12px;font-weight:600;background:var(--turmeric);color:#241a06;border:none;padding:0 14px;border-radius:8px;">🗣️ พูด</button>
+  </div>
   <div class="tabbar">
     <button class="tab-btn active" data-tab="order">🍽️ ออเดอร์</button>
     <button class="tab-btn" data-tab="menu">📋 จัดการเมนู</button>
@@ -175,8 +195,48 @@
       <div class="field"><label>เบอร์โทร</label><input type="text" id="setPhone" placeholder="เบอร์ติดต่อร้าน"></div>
       <div class="field"><label>เลขประจำตัวผู้เสียภาษี (ถ้ามี)</label><input type="text" id="setTaxId" placeholder="เลข 13 หลัก"></div>
       <div class="field"><label>ข้อความท้ายใบเสร็จ</label><input type="text" id="setFooter" placeholder="เช่น ขอบคุณที่ใช้บริการ"></div>
+      <div class="field"><label>📢 ข้อความประกาศ/โปรโมชั่น (แสดงในหน้าสั่งอาหารลูกค้า)</label><input type="text" id="setPromo" placeholder="เช่น วันนี้ส้มตำลด 10 บาท! เว้นว่างไว้ถ้าไม่มีโปร"></div>
       <button class="save-btn" id="saveSettingsBtn">บันทึกข้อมูลร้าน</button>
     </div>
+
+    <div class="section-title" style="font-family:'Kanit',sans-serif;font-weight:700;font-size:14px;color:var(--dim);margin:20px 0 8px 2px;">🔥 จัดการโปรโมชั่น</div>
+    <div class="settings-card">
+      <div class="field"><label>ประเภทโปร</label>
+        <div class="type-row" style="display:flex;gap:8px;">
+          <button type="button" class="type-btn active" id="promoTypeSingle" data-t="single" style="flex:1;font-family:'Kanit',sans-serif;font-weight:600;font-size:12.5px;padding:9px;border-radius:10px;background:var(--turmeric);color:#241a06;border:1px solid var(--turmeric);">ลดราคาเมนูเดี่ยว</button>
+          <button type="button" class="type-btn" id="promoTypeBundle" data-t="bundle" style="flex:1;font-family:'Kanit',sans-serif;font-weight:600;font-size:12.5px;padding:9px;border-radius:10px;background:var(--char-2);color:var(--dim);border:1px solid var(--line);">ซื้อครบชุดลดราคา</button>
+        </div>
+      </div>
+
+      <!-- single-item promo fields -->
+      <div id="promoSingleFields">
+        <div class="field"><label>เลือกเมนู</label>
+          <select id="promoItemSelect" style="width:100%;background:var(--char-2);border:1px solid var(--line);border-radius:10px;color:var(--cream);font-size:14.5px;padding:11px 12px;"></select>
+        </div>
+        <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="field"><label>ส่วนลด (บาท)</label><input type="number" id="promoDiscount" placeholder="0"></div>
+          <div class="field"><label>ราคาหลังลด</label><input type="text" id="promoPricePreview" disabled style="opacity:.7;"></div>
+        </div>
+      </div>
+
+      <!-- bundle promo fields -->
+      <div id="promoBundleFields" style="display:none;">
+        <div class="field"><label>ซื้อครบกี่ชิ้น</label>
+          <select id="promoBundleCount" style="width:100%;background:var(--char-2);border:1px solid var(--line);border-radius:10px;color:var(--cream);font-size:14.5px;padding:11px 12px;">
+            <option value="2">2 ชิ้น</option>
+            <option value="3">3 ชิ้น</option>
+          </select>
+        </div>
+        <div class="field"><label>เลือกเมนูที่เข้าร่วมโปร (เลือกได้หลายอัน)</label>
+          <div id="promoBundleItemsList" style="max-height:180px;overflow-y:auto;background:var(--char-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;"></div>
+        </div>
+        <div class="field"><label>ส่วนลดต่อชุด (บาท)</label><input type="number" id="promoBundleDiscount" placeholder="0"></div>
+      </div>
+
+      <div class="field"><label>หมายเหตุ (ถ้ามี)</label><input type="text" id="promoNote" placeholder="เช่น เฉพาะวันนี้เท่านั้น"></div>
+      <button class="save-btn" id="addPromoBtn">+ เพิ่มโปรโมชั่น</button>
+    </div>
+    <div id="promoList" style="margin-top:12px;"></div>
   </main>
 </div>
 
@@ -349,16 +409,10 @@ if('speechSynthesis' in window){
   }, 5000);
 }
 
-document.getElementById('testVoiceBtn').onclick = ()=>{
-  if(!('speechSynthesis' in window)){
-    alert('เบราว์เซอร์นี้ไม่รองรับเสียงพูด (Speech Synthesis) เลย');
-    return;
-  }
-  const voices = speechSynthesis.getVoices();
-  const thVoices = voices.filter(v=> v.lang && v.lang.toLowerCase().startsWith('th'));
-  const langList = [...new Set(voices.map(v=>v.lang))].join(', ') || '(ไม่พบเสียงใดเลย)';
-  alert('พบเสียงทั้งหมด ' + voices.length + ' แบบ\nภาษาที่มี: ' + langList + '\nมีเสียงไทยไหม: ' + (thVoices.length > 0 ? 'มี ('+thVoices.length+' เสียง)' : 'ไม่มี'));
-  speakThai('ทดสอบระบบเสียงพูดภาษาไทย');
+document.getElementById('speakCustomBtn').onclick = ()=>{
+  const text = document.getElementById('customVoiceText').value.trim();
+  if(!text){ alert('พิมพ์ข้อความก่อนครับ'); return; }
+  speakThai(text);
 };
 
 function playDing(){
@@ -500,6 +554,7 @@ let editingId = null;
 db.ref('menu').on('value', snap=>{
   menu = snap.val() || {};
   renderMenu();
+  refreshPromoItemSelect();
 });
 
 function renderMenu(){
@@ -610,6 +665,7 @@ db.ref('settings').on('value', snap=>{
   document.getElementById('setPhone').value = s.phone || '';
   document.getElementById('setTaxId').value = s.taxId || '';
   document.getElementById('setFooter').value = s.footer || '';
+  document.getElementById('setPromo').value = s.promo || '';
 });
 
 document.getElementById('saveSettingsBtn').onclick = ()=>{
@@ -621,11 +677,165 @@ document.getElementById('saveSettingsBtn').onclick = ()=>{
     phone: document.getElementById('setPhone').value.trim(),
     taxId: document.getElementById('setTaxId').value.trim(),
     footer: document.getElementById('setFooter').value.trim(),
+    promo: document.getElementById('setPromo').value.trim(),
   };
   db.ref('settings').set(data)
     .then(()=> showToast('บันทึกข้อมูลร้านแล้ว 🎉'))
     .catch(err=> alert('บันทึกไม่สำเร็จ: ' + err.message));
 };
+
+// ================= PROMOTIONS =================
+let promotions = {};
+let promoType = 'single';
+
+document.getElementById('promoTypeSingle').onclick = ()=> setPromoType('single');
+document.getElementById('promoTypeBundle').onclick = ()=> setPromoType('bundle');
+function setPromoType(t){
+  promoType = t;
+  document.getElementById('promoTypeSingle').classList.toggle('active', t==='single');
+  document.getElementById('promoTypeSingle').style.background = t==='single' ? 'var(--turmeric)' : 'var(--char-2)';
+  document.getElementById('promoTypeSingle').style.color = t==='single' ? '#241a06' : 'var(--dim)';
+  document.getElementById('promoTypeBundle').classList.toggle('active', t==='bundle');
+  document.getElementById('promoTypeBundle').style.background = t==='bundle' ? 'var(--turmeric)' : 'var(--char-2)';
+  document.getElementById('promoTypeBundle').style.color = t==='bundle' ? '#241a06' : 'var(--dim)';
+  document.getElementById('promoSingleFields').style.display = t==='single' ? 'block' : 'none';
+  document.getElementById('promoBundleFields').style.display = t==='bundle' ? 'block' : 'none';
+}
+
+function refreshPromoItemSelect(){
+  const sel = document.getElementById('promoItemSelect');
+  const currentVal = sel.value;
+  sel.innerHTML = Object.entries(menu).map(([id,it])=>
+    `<option value="${id}" data-price="${it.price||0}">${it.name} (${it.price||0} บาท)</option>`).join('');
+  if(currentVal && menu[currentVal]) sel.value = currentVal;
+  updatePromoPricePreview();
+
+  const checkList = document.getElementById('promoBundleItemsList');
+  const checkedIds = Array.from(checkList.querySelectorAll('input:checked')).map(cb=>cb.value);
+  checkList.innerHTML = Object.entries(menu).map(([id,it])=>`
+    <label class="promo-bundle-check">
+      <input type="checkbox" value="${id}" ${checkedIds.includes(id)?'checked':''}>
+      ${it.name} (${it.price||0} บาท)
+    </label>`).join('') || '<div style="color:var(--dim);font-size:13px;">ยังไม่มีเมนู กรุณาเพิ่มเมนูก่อน</div>';
+}
+document.getElementById('promoItemSelect').onchange = updatePromoPricePreview;
+document.getElementById('promoDiscount').oninput = updatePromoPricePreview;
+
+function updatePromoPricePreview(){
+  const sel = document.getElementById('promoItemSelect');
+  const opt = sel.options[sel.selectedIndex];
+  const price = opt ? parseFloat(opt.dataset.price) || 0 : 0;
+  const discount = parseFloat(document.getElementById('promoDiscount').value) || 0;
+  const finalPrice = Math.max(0, price - discount);
+  document.getElementById('promoPricePreview').value = finalPrice + ' บาท';
+}
+
+document.getElementById('addPromoBtn').onclick = ()=>{
+  const note = document.getElementById('promoNote').value.trim();
+
+  if(promoType === 'single'){
+    const sel = document.getElementById('promoItemSelect');
+    const itemId = sel.value;
+    if(!itemId){ alert('ยังไม่มีเมนูให้เลือก กรุณาเพิ่มเมนูก่อน'); return; }
+    const opt = sel.options[sel.selectedIndex];
+    const originalPrice = parseFloat(opt.dataset.price) || 0;
+    const discount = parseFloat(document.getElementById('promoDiscount').value) || 0;
+    if(!discount || discount <= 0){ alert('กรุณาใส่ส่วนลดมากกว่า 0'); return; }
+
+    db.ref('promotions').push({
+      type: 'single',
+      itemId,
+      itemName: menu[itemId] ? menu[itemId].name : opt.textContent,
+      originalPrice,
+      discount,
+      note,
+      active: true,
+      timestamp: Date.now()
+    }).then(()=>{
+      document.getElementById('promoDiscount').value = '';
+      document.getElementById('promoNote').value = '';
+      updatePromoPricePreview();
+      showToast('เพิ่มโปรโมชั่นแล้ว 🎉');
+    }).catch(err=> alert('บันทึกไม่สำเร็จ: ' + err.message));
+
+  } else {
+    const requiredCount = parseInt(document.getElementById('promoBundleCount').value);
+    const checked = Array.from(document.querySelectorAll('#promoBundleItemsList input:checked'));
+    const itemIds = checked.map(cb=>cb.value);
+    const itemNames = itemIds.map(id=> menu[id]?.name).filter(Boolean);
+    const discount = parseFloat(document.getElementById('promoBundleDiscount').value) || 0;
+
+    if(itemIds.length === 0){ alert('กรุณาเลือกเมนูที่เข้าร่วมโปรอย่างน้อย 1 อัน'); return; }
+    if(!discount || discount <= 0){ alert('กรุณาใส่ส่วนลดมากกว่า 0'); return; }
+
+    db.ref('promotions').push({
+      type: 'bundle',
+      requiredCount,
+      itemIds,
+      itemNames,
+      discount,
+      note,
+      active: true,
+      timestamp: Date.now()
+    }).then(()=>{
+      document.getElementById('promoBundleDiscount').value = '';
+      document.getElementById('promoNote').value = '';
+      document.querySelectorAll('#promoBundleItemsList input:checked').forEach(cb=> cb.checked=false);
+      showToast('เพิ่มโปรโมชั่นแล้ว 🎉');
+    }).catch(err=> alert('บันทึกไม่สำเร็จ: ' + err.message));
+  }
+};
+
+db.ref('promotions').on('value', snap=>{
+  promotions = snap.val() || {};
+  renderPromoList();
+});
+
+function renderPromoList(){
+  const list = document.getElementById('promoList');
+  const entries = Object.entries(promotions);
+  if(entries.length === 0){
+    list.innerHTML = '';
+    return;
+  }
+  list.innerHTML = entries.map(([id,p])=>{
+    if(p.type === 'bundle'){
+      const names = (p.itemNames || []).join(', ');
+      return `
+      <div class="promo-item-card">
+        <div class="promo-item-info">
+          <div class="promo-item-name">🎁 ซื้อครบ ${p.requiredCount} ชิ้น จาก: ${names}${p.note ? ' · '+p.note : ''}</div>
+          <div class="promo-item-price"><span class="new">ลด ${p.discount} บาท/ชุด</span></div>
+        </div>
+        <div class="promo-item-actions">
+          <button class="promo-toggle-btn ${p.active!==false?'on':'off'}" data-id="${id}" data-active="${p.active!==false}">${p.active!==false?'เปิดใช้งาน':'ปิดอยู่'}</button>
+          <button class="promo-del-btn" data-del="${id}">🗑️</button>
+        </div>
+      </div>`;
+    }
+    const finalPrice = Math.max(0, p.originalPrice - p.discount);
+    return `
+    <div class="promo-item-card">
+      <div class="promo-item-info">
+        <div class="promo-item-name">${p.itemName}${p.note ? ' · '+p.note : ''}</div>
+        <div class="promo-item-price"><span class="old">${p.originalPrice} บาท</span><span class="new">${finalPrice} บาท</span></div>
+      </div>
+      <div class="promo-item-actions">
+        <button class="promo-toggle-btn ${p.active!==false?'on':'off'}" data-id="${id}" data-active="${p.active!==false}">${p.active!==false?'เปิดใช้งาน':'ปิดอยู่'}</button>
+        <button class="promo-del-btn" data-del="${id}">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.promo-toggle-btn').forEach(btn=>{
+    btn.onclick = ()=> db.ref('promotions/' + btn.dataset.id + '/active').set(btn.dataset.active !== 'true');
+  });
+  list.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.onclick = ()=>{
+      if(confirm('ลบโปรโมชั่นนี้ใช่ไหม?')) db.ref('promotions/' + btn.dataset.del).remove();
+    };
+  });
+}
 
 // ================= shared =================
 function showToast(msg){

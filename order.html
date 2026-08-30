@@ -400,8 +400,34 @@ function renderMenu(){
   });
 }
 
-function cartTotal(){
+function cartSubtotal(){
   return Object.entries(cart).reduce((sum,[id,qty])=> sum + getEffectivePrice(id)*qty, 0);
+}
+
+function activeBundlePromos(){
+  return Object.values(promotions).filter(p=> p.type === 'bundle' && p.active !== false);
+}
+
+function bundleDiscountTotal(){
+  let total = 0;
+  activeBundlePromos().forEach(p=>{
+    const qtyInSet = (p.itemIds||[]).reduce((sum,id)=> sum + (cart[id]||0), 0);
+    const sets = Math.floor(qtyInSet / p.requiredCount);
+    total += sets * p.discount;
+  });
+  return total;
+}
+
+function bundleDiscountBreakdown(){
+  return activeBundlePromos().map(p=>{
+    const qtyInSet = (p.itemIds||[]).reduce((sum,id)=> sum + (cart[id]||0), 0);
+    const sets = Math.floor(qtyInSet / p.requiredCount);
+    return { promo: p, sets, discount: sets * p.discount };
+  }).filter(b=> b.sets > 0);
+}
+
+function cartTotal(){
+  return Math.max(0, cartSubtotal() - bundleDiscountTotal());
 }
 function cartCount(){
   return Object.values(cart).reduce((a,b)=>a+b,0);
@@ -453,6 +479,18 @@ function renderCartList(){
       <div class="price">${getEffectivePrice(id) * qty} บาท</div>`;
     list.appendChild(row);
   });
+
+  const bundles = bundleDiscountBreakdown();
+  bundles.forEach(b=>{
+    const row = document.createElement('div');
+    row.className = 'cart-row';
+    row.style.color = 'var(--turmeric)';
+    row.innerHTML = `
+      <div style="flex:1;">🎁 ซื้อครบชุด x${b.sets} (${(b.promo.itemNames||[]).join(', ')})</div>
+      <div class="price" style="color:var(--turmeric);">-${b.discount} บาท</div>`;
+    list.appendChild(row);
+  });
+
   list.querySelectorAll('[data-act]').forEach(btn=>{
     btn.onclick = ()=>{
       const id = btn.dataset.id;
@@ -469,9 +507,12 @@ function renderCartList(){
 
 document.getElementById('confirmBtn').onclick = ()=>{
   if(cartCount() === 0) return;
+  const bundles = bundleDiscountBreakdown();
   const order = {
     table: tableNo,
     items: Object.entries(cart).map(([id,qty])=>({itemId:id, name:menu[id].name, price:getEffectivePrice(id), qty})),
+    bundleDiscount: bundleDiscountTotal(),
+    bundleDiscountNote: bundles.map(b=> `ซื้อครบชุด x${b.sets} (${(b.promo.itemNames||[]).join(', ')}) -${b.discount}`).join('; '),
     total: cartTotal(),
     status: 'pending',
     timestamp: Date.now()
