@@ -194,7 +194,7 @@
           @media print{
             body.printing-sales *{ visibility:hidden; }
             body.printing-sales #salesPrintArea, body.printing-sales #salesPrintArea *{ visibility:visible; }
-            body.printing-sales #salesPrintArea{ position:fixed; left:0; top:0; width:100%; padding:20px; border-radius:0; }
+            body.printing-sales #salesPrintArea{ position:static; width:100%; padding:20px; border-radius:0; }
             .preview-btn-row, .sheet-head{ display:none !important; }
           }
         </style>
@@ -318,7 +318,7 @@
         @media print{
           body.printing-audit *{ visibility:hidden; }
           body.printing-audit #auditPrintArea, body.printing-audit #auditPrintArea *{ visibility:visible; }
-          body.printing-audit #auditPrintArea{ position:fixed; left:0; top:0; width:100%; padding:20px; border-radius:0; }
+          body.printing-audit #auditPrintArea{ position:static; width:100%; max-width:400px; margin:0 auto; padding:20px; border-radius:0; }
           .preview-btn-row, .sheet-head{ display:none !important; }
         }
       </style>
@@ -345,7 +345,7 @@
     @media print{
       body.printing-tax *{ visibility:hidden; }
       body.printing-tax #taxPrintArea, body.printing-tax #taxPrintArea *{ visibility:visible; }
-      body.printing-tax #taxPrintArea{ display:block !important; position:fixed; left:0; top:0; width:100%; background:#fff; color:#000; font-family:'Sarabun',sans-serif; padding:16px; font-size:12px; }
+      body.printing-tax #taxPrintArea{ display:block !important; position:static; width:100%; background:#fff; color:#000; font-family:'Sarabun',sans-serif; padding:16px; font-size:12px; }
       #taxPrintArea h2{ text-align:center; font-family:'Kanit',sans-serif; font-size:16px; margin:0 0 10px; }
       #taxPrintArea table{ width:100%; border-collapse:collapse; font-size:11px; }
       #taxPrintArea th, #taxPrintArea td{ border:1px solid #000; padding:3px 5px; }
