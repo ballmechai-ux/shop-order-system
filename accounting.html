@@ -509,6 +509,7 @@ document.getElementById('salesPreviewClose').onclick = closeSalesPreview;
 document.getElementById('salesPreviewCloseBtn').onclick = closeSalesPreview;
 document.getElementById('salesPreviewOverlay').onclick = closeSalesPreview;
 document.getElementById('salesPreviewPrintBtn').onclick = ()=>{
+  document.body.classList.remove('printing-sales', 'printing-tax');
   document.body.classList.add('printing-sales');
   window.print();
 };
@@ -681,6 +682,7 @@ function initTaxReportControls(){
   }
   document.getElementById('genTaxReportBtn').onclick = generateTaxReport;
   document.getElementById('printTaxReportBtn').onclick = ()=>{
+    document.body.classList.remove('printing-sales', 'printing-tax');
     document.body.classList.add('printing-tax');
     window.print();
   };
