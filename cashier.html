@@ -111,14 +111,16 @@
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-40px);background:var(--leaf);color:#12180a;font-family:'Kanit',sans-serif;font-weight:600;padding:10px 20px;border-radius:999px;font-size:13px;z-index:60;opacity:0;transition:all .25s ease;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-  /* printable receipt (hidden until print) */
-  #receiptPrint{display:none;}
+  /* printable receipt (hidden off-screen until print) */
+  #receiptPrint{
+    position:absolute;left:-9999px;top:0;width:280px;
+    background:#fff;color:#000;font-family:'Sarabun',monospace;font-size:12px;padding:10px;
+  }
   @media print{
     body *{ visibility:hidden; }
     #receiptPrint, #receiptPrint *{ visibility:visible; }
     #receiptPrint{
-      display:block;position:static;width:280px;margin:0 auto;
-      background:#fff;color:#000;font-family:'Sarabun',monospace;font-size:12px;padding:10px;
+      position:static;left:auto;margin:0 auto;
     }
     #receiptPrint h2{font-family:'Kanit',sans-serif;text-align:center;font-size:16px;margin:0 0 4px;}
     #receiptPrint .r-line{border-top:1px dashed #000;margin:6px 0;}

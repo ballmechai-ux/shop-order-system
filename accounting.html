@@ -340,12 +340,12 @@
 </div>
 
 <!-- printable tax report (hidden until print) -->
-<div id="taxPrintArea" style="display:none;">
+<div id="taxPrintArea" style="position:absolute;left:-9999px;top:0;width:800px;background:#fff;color:#000;">
   <style>
     @media print{
       body.printing-tax *{ visibility:hidden; }
       body.printing-tax #taxPrintArea, body.printing-tax #taxPrintArea *{ visibility:visible; }
-      body.printing-tax #taxPrintArea{ display:block !important; position:static; width:100%; background:#fff; color:#000; font-family:'Sarabun',sans-serif; padding:16px; font-size:12px; }
+      body.printing-tax #taxPrintArea{ position:static; left:auto; width:100%; font-family:'Sarabun',sans-serif; padding:16px; font-size:12px; }
       #taxPrintArea h2{ text-align:center; font-family:'Kanit',sans-serif; font-size:16px; margin:0 0 10px; }
       #taxPrintArea table{ width:100%; border-collapse:collapse; font-size:11px; }
       #taxPrintArea th, #taxPrintArea td{ border:1px solid #000; padding:3px 5px; }
