@@ -49,6 +49,55 @@
   }
   .call-bill-btn:active{transform:scale(.95);}
   .call-bill-btn[disabled]{opacity:.5;}
+
+  .member-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(122,154,74,.15);border:1px solid var(--leaf);color:#a9c97f;
+    font-family:'Kanit',sans-serif;font-weight:600;font-size:12.5px;
+    padding:6px 12px;border-radius:999px;margin-left:8px;
+  }
+  .stamp-progress{
+    display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;
+  }
+  .stamp-dot{
+    width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:13px;
+    background:var(--char-2);border:1px solid var(--line);color:var(--dim);
+  }
+  .stamp-dot.filled{background:var(--turmeric);border-color:var(--turmeric);color:#241a06;}
+  .member-form-field{margin-bottom:12px;}
+  .member-form-field label{display:block;font-size:12.5px;color:var(--dim);margin-bottom:6px;font-family:'Kanit',sans-serif;}
+  .member-form-field input{
+    width:100%;background:var(--char);border:1px solid var(--line);border-radius:10px;
+    color:var(--cream);font-size:14.5px;padding:11px 12px;
+  }
+  .member-tab-row{display:flex;gap:8px;margin-bottom:16px;}
+  .member-tab-btn{flex:1;font-family:'Kanit',sans-serif;font-weight:600;font-size:13px;padding:10px;border-radius:10px;background:var(--char);color:var(--dim);border:1px solid var(--line);}
+  .member-tab-btn.active{background:var(--turmeric);color:#241a06;border-color:var(--turmeric);}
+  .member-history-row{background:var(--char);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px;}
+  .member-history-date{color:var(--dim);font-size:11.5px;margin-bottom:3px;}
+  .redeem-btn{
+    width:100%;background:linear-gradient(135deg, var(--chili), var(--turmeric));color:#fff;border:none;
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:14px;padding:13px;border-radius:12px;margin-top:12px;
+  }
+  .feedback-note{
+    background:var(--char-2);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--dim);margin-bottom:14px;
+  }
+  .feedback-textarea{
+    width:100%;background:var(--char);border:1px solid var(--line);border-radius:10px;
+    color:var(--cream);font-size:14px;padding:12px;min-height:110px;resize:vertical;font-family:'Sarabun',sans-serif;
+  }
+  .oos-notice-banner{
+    position:fixed;top:70px;left:18px;right:18px;z-index:70;
+    background:var(--chili);color:#fff;border-radius:14px;padding:14px 16px;
+    font-family:'Kanit',sans-serif;font-weight:600;font-size:13.5px;
+    display:none;box-shadow:0 8px 24px rgba(0,0,0,.4);
+  }
+  .oos-notice-banner.show{display:block;}
+  .oos-notice-banner button{
+    margin-top:8px;background:#fff;color:var(--chili);border:none;font-family:'Kanit',sans-serif;font-weight:700;
+    padding:6px 14px;border-radius:8px;font-size:12.5px;
+  }
   h1.brand{
     font-family:'Kanit',sans-serif;font-weight:800;
     font-size:26px;margin:10px 0 2px;color:var(--cream);
@@ -207,6 +256,8 @@
 <header class="top">
   <span class="table-badge"><span class="dot"></span><span id="tableLabel">โต๊ะ —</span></span>
   <button class="call-bill-btn" id="callBillBtn">🧾 เช็คบิล</button>
+  <button class="call-bill-btn" id="memberBtn">👤 สมาชิก</button>
+  <button class="call-bill-btn" id="feedbackBtn">💬 ติชม</button>
   <h1 class="brand">เมนูวันนี้</h1>
   <p class="sub">แตะเพื่อเพิ่มลงตะกร้า แล้วกดยืนยันสั่งอาหาร</p>
 </header>
@@ -256,6 +307,36 @@
     <button class="sheet-close" id="promoSheetClose">✕</button>
   </div>
   <div class="sheet-list" id="promoSheetList"></div>
+</div>
+
+<!-- member sheet -->
+<div class="overlay" id="overlayMember"></div>
+<div class="sheet" id="memberSheet">
+  <div class="sheet-head">
+    <h2>👤 สมาชิก</h2>
+    <button class="sheet-close" id="memberSheetClose">✕</button>
+  </div>
+  <div class="sheet-list" id="memberSheetBody"></div>
+</div>
+
+<!-- feedback sheet -->
+<div class="overlay" id="overlayFeedback"></div>
+<div class="sheet" id="feedbackSheet">
+  <div class="sheet-head">
+    <h2>💬 คำติชม</h2>
+    <button class="sheet-close" id="feedbackSheetClose">✕</button>
+  </div>
+  <div class="sheet-list">
+    <div class="feedback-note">🔒 คำติชมของคุณไม่ระบุตัวตน ทางร้านจะไม่ทราบว่าใครเป็นผู้ส่ง แม้จะเป็นสมาชิกอยู่ก็ตาม</div>
+    <textarea class="feedback-textarea" id="feedbackText" placeholder="บอกเราได้เลยว่าอยากให้ร้านปรับปรุงอะไร..."></textarea>
+    <button class="confirm-btn" id="feedbackSubmitBtn" style="margin-top:12px;">ส่งคำติชม</button>
+  </div>
+</div>
+
+<!-- out-of-stock notice banner -->
+<div class="oos-notice-banner" id="oosBanner">
+  <div id="oosBannerText"></div>
+  <button id="oosBannerClose">รับทราบ</button>
 </div>
 
 <!-- ===================== Firebase ===================== -->
@@ -491,6 +572,16 @@ function renderCartList(){
     list.appendChild(row);
   });
 
+  if(freeRedeemItemId && menu[freeRedeemItemId]){
+    const row = document.createElement('div');
+    row.className = 'cart-row';
+    row.style.color = 'var(--leaf)';
+    row.innerHTML = `
+      <div style="flex:1;">🎁 ${freeRedeemItemName} (คูปองฟรี)</div>
+      <div class="price" style="color:var(--leaf);">0 บาท <button id="cancelFreeRedeem" style="margin-left:6px;background:none;border:none;color:var(--dim);">✕</button></div>`;
+    list.appendChild(row);
+  }
+
   list.querySelectorAll('[data-act]').forEach(btn=>{
     btn.onclick = ()=>{
       const id = btn.dataset.id;
@@ -502,21 +593,40 @@ function renderCartList(){
       document.getElementById('cartTotalFull').textContent = cartTotal() + ' บาท';
     };
   });
+  const cancelFreeBtn = document.getElementById('cancelFreeRedeem');
+  if(cancelFreeBtn){
+    cancelFreeBtn.onclick = (e)=>{
+      e.stopPropagation();
+      freeRedeemItemId = null;
+      freeRedeemItemName = null;
+      renderCartList();
+    };
+  }
   document.getElementById('cartTotalFull').textContent = cartTotal() + ' บาท';
 }
 
 document.getElementById('confirmBtn').onclick = ()=>{
   if(cartCount() === 0) return;
   const bundles = bundleDiscountBreakdown();
+  const items = Object.entries(cart).map(([id,qty])=>({itemId:id, name:menu[id].name, price:getEffectivePrice(id), qty}));
+
+  if(freeRedeemItemId && menu[freeRedeemItemId]){
+    items.push({ itemId: freeRedeemItemId, name: menu[freeRedeemItemId].name + ' (ฟรี)', price: 0, qty: 1, isFreeRedeem: true });
+  }
+
   const order = {
     table: tableNo,
-    items: Object.entries(cart).map(([id,qty])=>({itemId:id, name:menu[id].name, price:getEffectivePrice(id), qty})),
+    items,
     bundleDiscount: bundleDiscountTotal(),
     bundleDiscountNote: bundles.map(b=> `ซื้อครบชุด x${b.sets} (${(b.promo.itemNames||[]).join(', ')}) -${b.discount}`).join('; '),
     total: cartTotal(),
     status: 'pending',
     timestamp: Date.now()
   };
+  if(memberId && memberData){
+    order.memberId = memberId;
+    order.memberNo = memberData.memberNo;
+  }
 
   if(!db){
     alert('ยังไม่ได้เชื่อมต่อฐานข้อมูล (Firebase) — ออเดอร์นี้จะไม่ถูกบันทึก');
@@ -528,7 +638,28 @@ document.getElementById('confirmBtn').onclick = ()=>{
   btn.textContent = 'กำลังส่ง...';
 
   db.ref('orders').push(order)
-    .then(()=>{
+    .then((ref)=>{
+      // track this order to watch for out-of-stock notices later
+      watchedOrderIds.push(ref.key);
+      sessionStorage.setItem('watchedOrderIds', JSON.stringify(watchedOrderIds));
+      watchOrderForOos(ref.key);
+
+      // update member stamp count
+      if(memberId){
+        let drinkQty = 0;
+        Object.entries(cart).forEach(([id,qty])=>{
+          if(menu[id] && isDrinkCategory(menu[id].category)) drinkQty += qty;
+        });
+        db.ref('members/' + memberId).transaction(m=>{
+          if(!m) return m;
+          m.stampCount = (m.stampCount || 0) + drinkQty;
+          if(freeRedeemItemId) m.stampCount = Math.max(0, m.stampCount - 10);
+          return m;
+        });
+      }
+
+      freeRedeemItemId = null;
+      freeRedeemItemName = null;
       cart = {};
       closeSheet();
       renderMenu();
@@ -655,6 +786,246 @@ function closePromoSheet(){
 }
 document.getElementById('promoSheetClose').onclick = closePromoSheet;
 document.getElementById('overlayPromo').onclick = closePromoSheet;
+
+// ================= MEMBERSHIP SYSTEM =================
+const DRINK_CATEGORY_HINTS = ['เย็น', 'ปั่น'];
+function isDrinkCategory(cat){
+  if(!cat) return false;
+  return DRINK_CATEGORY_HINTS.some(hint=> cat.includes(hint));
+}
+
+let memberId = localStorage.getItem('memberId') || null;
+let memberData = null;
+let freeRedeemItemId = null;
+let freeRedeemItemName = null;
+
+function watchMember(){
+  if(!memberId || !db) return;
+  db.ref('members/' + memberId).on('value', snap=>{
+    memberData = snap.val();
+    if(!memberData){
+      // memberId invalid/deleted — reset
+      localStorage.removeItem('memberId');
+      memberId = null;
+    }
+  });
+}
+watchMember();
+
+const overlayMember = document.getElementById('overlayMember');
+const memberSheetEl = document.getElementById('memberSheet');
+function openMemberSheet(){
+  renderMemberSheet();
+  overlayMember.classList.add('show');
+  memberSheetEl.classList.add('show');
+}
+function closeMemberSheet(){
+  overlayMember.classList.remove('show');
+  memberSheetEl.classList.remove('show');
+}
+document.getElementById('memberBtn').onclick = openMemberSheet;
+document.getElementById('memberSheetClose').onclick = closeMemberSheet;
+overlayMember.onclick = closeMemberSheet;
+
+function renderMemberSheet(){
+  const body = document.getElementById('memberSheetBody');
+  if(!memberId || !memberData){
+    body.innerHTML = `
+      <div class="member-tab-row">
+        <button class="member-tab-btn active" id="mtSignup">สมัครสมาชิกใหม่</button>
+        <button class="member-tab-btn" id="mtLogin">มีรหัสสมาชิกแล้ว</button>
+      </div>
+      <div id="memberFormArea"></div>
+    `;
+    showSignupForm();
+    document.getElementById('mtSignup').onclick = ()=>{
+      document.getElementById('mtSignup').classList.add('active');
+      document.getElementById('mtLogin').classList.remove('active');
+      showSignupForm();
+    };
+    document.getElementById('mtLogin').onclick = ()=>{
+      document.getElementById('mtLogin').classList.add('active');
+      document.getElementById('mtSignup').classList.remove('active');
+      showLoginForm();
+    };
+  } else {
+    renderMemberDashboard(body);
+  }
+}
+
+function showSignupForm(){
+  const area = document.getElementById('memberFormArea');
+  area.innerHTML = `
+    <div class="member-form-field">
+      <label>ชื่อเล่นหรือชื่อจริง</label>
+      <input type="text" id="signupName" placeholder="เช่น น้องเบล">
+    </div>
+    <button class="confirm-btn" id="signupSubmitBtn">สมัครสมาชิก</button>
+  `;
+  document.getElementById('signupSubmitBtn').onclick = ()=>{
+    const name = document.getElementById('signupName').value.trim();
+    if(!name){ alert('กรุณาใส่ชื่อ'); return; }
+    if(!db){ alert('ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
+    db.ref('memberCounter').transaction(cur=> (cur||0)+1)
+      .then(result=>{
+        const memberNo = result.snapshot.val();
+        return db.ref('members').push({ name, memberNo, stampCount: 0, createdAt: Date.now() });
+      })
+      .then(ref=>{
+        memberId = ref.key;
+        localStorage.setItem('memberId', memberId);
+        watchMember();
+        setTimeout(()=>{ renderMemberSheet(); }, 300); // wait briefly for watchMember snapshot
+      })
+      .catch(err=> alert('สมัครไม่สำเร็จ: ' + err.message));
+  };
+}
+
+function showLoginForm(){
+  const area = document.getElementById('memberFormArea');
+  area.innerHTML = `
+    <div class="member-form-field">
+      <label>เลขสมาชิกของคุณ</label>
+      <input type="number" id="loginMemberNo" placeholder="เช่น 12">
+    </div>
+    <button class="confirm-btn" id="loginSubmitBtn">เข้าสู่ระบบ</button>
+  `;
+  document.getElementById('loginSubmitBtn').onclick = ()=>{
+    const no = parseInt(document.getElementById('loginMemberNo').value);
+    if(!no){ alert('กรุณาใส่เลขสมาชิก'); return; }
+    db.ref('members').orderByChild('memberNo').equalTo(no).once('value')
+      .then(snap=>{
+        const val = snap.val();
+        if(!val){ alert('ไม่พบเลขสมาชิกนี้'); return; }
+        const key = Object.keys(val)[0];
+        memberId = key;
+        localStorage.setItem('memberId', memberId);
+        watchMember();
+        setTimeout(()=>{ renderMemberSheet(); }, 300);
+      })
+      .catch(err=> alert('เข้าสู่ระบบไม่สำเร็จ: ' + err.message));
+  };
+}
+
+function renderMemberDashboard(body){
+  const stamps = memberData.stampCount || 0;
+  const filled = stamps % 10;
+  const canRedeem = stamps >= 10;
+  let dotsHtml = '';
+  for(let i=0;i<10;i++){
+    dotsHtml += `<div class="stamp-dot ${i < filled ? 'filled' : ''}">${i < filled ? '🥤' : ''}</div>`;
+  }
+
+  body.innerHTML = `
+    <div class="member-form-field">
+      <div style="font-family:'Kanit',sans-serif;font-weight:700;font-size:16px;">${memberData.name}</div>
+      <div style="color:var(--dim);font-size:12.5px;">สมาชิกเลขที่ #${String(memberData.memberNo).padStart(4,'0')}</div>
+    </div>
+    <div style="font-size:13px;color:var(--dim);margin-bottom:4px;">สะสมแก้ว (${filled}/10)</div>
+    <div class="stamp-progress">${dotsHtml}</div>
+    ${canRedeem ? `<button class="redeem-btn" id="redeemBtn">🎁 ใช้คูปองน้ำปั่น 1 แก้วฟรี</button>` : `<div style="font-size:12px;color:var(--dim);margin-top:6px;">ซื้อครบ 10 แก้ว รับฟรี 1 แก้ว</div>`}
+    ${freeRedeemItemId ? `<div style="margin-top:10px;padding:10px;background:var(--char-2);border-radius:10px;font-size:13px;color:var(--turmeric);">✅ เลือก "${freeRedeemItemName}" ฟรีไว้ในตะกร้าแล้ว</div>` : ''}
+    <div id="redeemPickerArea"></div>
+    <div class="section-title" style="font-family:'Kanit',sans-serif;font-weight:700;font-size:13px;color:var(--dim);margin:18px 0 8px;">ประวัติการสั่งของคุณ</div>
+    <div id="memberHistoryList"><div class="empty-note">กำลังโหลด...</div></div>
+  `;
+
+  if(canRedeem && !freeRedeemItemId){
+    document.getElementById('redeemBtn').onclick = ()=>{
+      const eligible = Object.entries(menu).filter(([id,it])=> isDrinkCategory(it.category) && it.available !== false);
+      const area = document.getElementById('redeemPickerArea');
+      if(eligible.length === 0){
+        area.innerHTML = `<div class="empty-note">ตอนนี้ไม่มีเมนูที่ร่วมรายการ</div>`;
+        return;
+      }
+      area.innerHTML = eligible.map(([id,it])=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px dashed var(--line);">
+          <span style="font-size:13.5px;">${it.name}</span>
+          <button class="add-btn" data-redeem="${id}" data-name="${it.name}">เลือก</button>
+        </div>`).join('');
+      area.querySelectorAll('[data-redeem]').forEach(btn=>{
+        btn.onclick = ()=>{
+          freeRedeemItemId = btn.dataset.redeem;
+          freeRedeemItemName = btn.dataset.name;
+          renderMemberDashboard(body);
+          renderCartList();
+          updateCartBar();
+        };
+      });
+    };
+  }
+
+  db.ref('orders').orderByChild('memberId').equalTo(memberId).limitToLast(15).once('value')
+    .then(snap=>{
+      const val = snap.val() || {};
+      const list = Object.values(val).sort((a,b)=> b.timestamp - a.timestamp);
+      const histEl = document.getElementById('memberHistoryList');
+      if(!histEl) return;
+      if(list.length === 0){
+        histEl.innerHTML = `<div class="empty-note">ยังไม่มีประวัติการสั่ง</div>`;
+        return;
+      }
+      histEl.innerHTML = list.map(o=>{
+        const d = new Date(o.timestamp).toLocaleDateString('th-TH');
+        const itemsStr = (o.items||[]).map(it=> it.name+' x'+it.qty).join(', ');
+        return `<div class="member-history-row"><div class="member-history-date">${d}</div>${itemsStr}<div style="margin-top:4px;color:var(--turmeric);font-family:'Kanit',sans-serif;font-weight:600;">${o.total} บาท</div></div>`;
+      }).join('');
+    });
+}
+
+// ================= FEEDBACK =================
+const overlayFeedback = document.getElementById('overlayFeedback');
+const feedbackSheetEl = document.getElementById('feedbackSheet');
+document.getElementById('feedbackBtn').onclick = ()=>{
+  document.getElementById('feedbackText').value = '';
+  overlayFeedback.classList.add('show');
+  feedbackSheetEl.classList.add('show');
+};
+document.getElementById('feedbackSheetClose').onclick = ()=>{
+  overlayFeedback.classList.remove('show');
+  feedbackSheetEl.classList.remove('show');
+};
+overlayFeedback.onclick = ()=>{
+  overlayFeedback.classList.remove('show');
+  feedbackSheetEl.classList.remove('show');
+};
+document.getElementById('feedbackSubmitBtn').onclick = ()=>{
+  const msg = document.getElementById('feedbackText').value.trim();
+  if(!msg){ alert('กรุณาพิมพ์ข้อความก่อน'); return; }
+  if(!db){ alert('ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
+  db.ref('feedback').push({ message: msg, timestamp: Date.now() })
+    .then(()=>{
+      overlayFeedback.classList.remove('show');
+      feedbackSheetEl.classList.remove('show');
+      showToast('ขอบคุณสำหรับคำติชม 🙏');
+    })
+    .catch(err=> alert('ส่งไม่สำเร็จ: ' + err.message));
+};
+
+// ================= OUT-OF-STOCK NOTICE (for orders placed this session) =================
+let watchedOrderIds = JSON.parse(sessionStorage.getItem('watchedOrderIds') || '[]');
+let seenOosNotices = JSON.parse(sessionStorage.getItem('seenOosNotices') || '[]');
+
+function watchOrderForOos(orderId){
+  if(!db) return;
+  db.ref('orders/' + orderId).on('value', snap=>{
+    const o = snap.val();
+    if(o && o.oosNotice && !seenOosNotices.includes(orderId + ':' + o.oosNotice)){
+      showOosBanner(o.oosNotice);
+      seenOosNotices.push(orderId + ':' + o.oosNotice);
+      sessionStorage.setItem('seenOosNotices', JSON.stringify(seenOosNotices));
+    }
+  });
+}
+watchedOrderIds.forEach(watchOrderForOos);
+
+function showOosBanner(text){
+  document.getElementById('oosBannerText').textContent = '⚠️ ' + text;
+  document.getElementById('oosBanner').classList.add('show');
+}
+document.getElementById('oosBannerClose').onclick = ()=>{
+  document.getElementById('oosBanner').classList.remove('show');
+};
 </script>
 </body>
 </html>

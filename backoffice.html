@@ -79,6 +79,9 @@
   .cancel-btn:active{transform:scale(.96);}
   .action-group{display:flex;align-items:center;}
   .empty{text-align:center;color:var(--dim);padding:60px 20px;font-size:14px;}
+  .feedback-row{background:var(--char);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+  .feedback-row .fb-date{font-size:11.5px;color:var(--dim);margin-bottom:6px;}
+  .feedback-row .fb-msg{font-size:14px;line-height:1.5;}
   .empty .big{font-size:34px;margin-bottom:8px;}
 
   /* ---- PIN gate (for menu/settings tabs) ---- */
@@ -169,6 +172,7 @@
     <button class="tab-btn active" data-tab="order">🍽️ ออเดอร์</button>
     <button class="tab-btn" data-tab="menu">📋 จัดการเมนู</button>
     <button class="tab-btn" data-tab="settings">⚙️ ตั้งค่าร้าน</button>
+    <button class="tab-btn" data-tab="feedback">💬 คำติชม</button>
   </div>
 </header>
 
@@ -237,6 +241,13 @@
       <button class="save-btn" id="addPromoBtn">+ เพิ่มโปรโมชั่น</button>
     </div>
     <div id="promoList" style="margin-top:12px;"></div>
+  </main>
+</div>
+
+<!-- ===================== FEEDBACK TAB ===================== -->
+<div class="tab-panel" id="panel-feedback">
+  <main class="settings-main">
+    <div id="feedbackAdminList"></div>
   </main>
 </div>
 
@@ -310,7 +321,7 @@ let pendingTab = null;
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.onclick = ()=>{
     const tab = btn.dataset.tab;
-    if((tab === 'menu' || tab === 'settings') && !adminUnlocked){
+    if((tab === 'menu' || tab === 'settings' || tab === 'feedback') && !adminUnlocked){
       pendingTab = tab;
       openPinGate();
       return;
@@ -501,10 +512,14 @@ function renderOrders(){
   entries.forEach(([id, o])=>{
     const card = document.createElement('div');
     card.className = 'order-card st-' + o.status;
-    const itemsHtml = (o.items||[]).map(it=>`
-      <div class="item-row">
+    const canCut = (o.status === 'pending' || o.status === 'cooking');
+    const itemsHtml = (o.items||[]).map((it,idx)=>`
+      <div class="item-row" style="${it.cut ? 'opacity:.5;text-decoration:line-through;' : ''}">
         <span><span class="qty">×${it.qty}</span><span class="name">${it.name}</span></span>
-        <span class="price">${it.price * it.qty} บาท</span>
+        <span style="display:flex;align-items:center;gap:6px;">
+          <span class="price">${it.price * it.qty} บาท</span>
+          ${canCut && !it.cut ? `<button data-cut-order="${id}" data-cut-idx="${idx}" style="background:none;border:1px solid var(--chili);color:var(--chili);font-size:10.5px;font-family:'Kanit',sans-serif;padding:2px 7px;border-radius:999px;">หมด</button>` : ''}
+        </span>
       </div>`).join('');
 
     let actionHtml = '', cancelHtml = '';
@@ -542,6 +557,28 @@ function renderOrders(){
   list.querySelectorAll('[data-cancel]').forEach(btn=>{
     btn.onclick = ()=>{
       if(confirm('ยกเลิกออเดอร์นี้ใช่ไหม?')) db.ref('orders/' + btn.dataset.cancel + '/status').set('cancelled');
+    };
+  });
+  list.querySelectorAll('[data-cut-order]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const orderId = btn.dataset.cutOrder;
+      const idx = parseInt(btn.dataset.cutIdx);
+      const order = orders[orderId];
+      if(!order || !order.items || !order.items[idx]) return;
+      const item = order.items[idx];
+      if(!confirm(`"${item.name}" หมดใช่ไหม? ระบบจะตัดออกจากบิลนี้และตั้งเมนูนี้เป็นของหมดทันที`)) return;
+
+      const newItems = order.items.map((it,i)=> i===idx ? {...it, cut:true} : it);
+      const newTotal = newItems.reduce((s,it)=> s + (it.cut ? 0 : it.price*it.qty), 0);
+      const updates = {};
+      updates['orders/' + orderId + '/items/' + idx + '/cut'] = true;
+      updates['orders/' + orderId + '/total'] = newTotal;
+      updates['orders/' + orderId + '/oosNotice'] = item.name + ' หมดแล้ว ขออภัยในความไม่สะดวกครับ';
+      if(item.itemId) updates['menu/' + item.itemId + '/available'] = false;
+
+      db.ref().update(updates)
+        .then(()=> showToast('ตัดรายการและตั้งของหมดแล้ว'))
+        .catch(err=> alert('ทำไม่สำเร็จ: ' + err.message));
     };
   });
 }
@@ -844,6 +881,21 @@ function showToast(msg){
   t.classList.add('show');
   setTimeout(()=> t.classList.remove('show'), 2000);
 }
+
+// ================= FEEDBACK (admin view) =================
+db.ref('feedback').on('value', snap=>{
+  const data = snap.val() || {};
+  const list = Object.values(data).sort((a,b)=> b.timestamp - a.timestamp);
+  const el = document.getElementById('feedbackAdminList');
+  if(list.length === 0){
+    el.innerHTML = `<div class="empty">ยังไม่มีคำติชม</div>`;
+    return;
+  }
+  el.innerHTML = list.map(f=>{
+    const d = new Date(f.timestamp).toLocaleString('th-TH');
+    return `<div class="feedback-row"><div class="fb-date">${d}</div><div class="fb-msg">${f.message}</div></div>`;
+  }).join('');
+});
 
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
