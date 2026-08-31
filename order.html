@@ -65,6 +65,46 @@
     background:var(--char-2);border:1px solid var(--line);color:var(--dim);
   }
   .stamp-dot.filled{background:var(--turmeric);border-color:var(--turmeric);color:#241a06;}
+
+  /* loyalty card widget (green branded design) */
+  .loyalty-card{
+    border-radius:20px;overflow:hidden;margin-bottom:16px;
+    background:linear-gradient(135deg,#eaf3df,#cfe3b8);
+    border:1px solid #a9c97f;
+  }
+  .loyalty-header{
+    padding:16px 16px 10px;text-align:center;
+    background:linear-gradient(135deg,#e4f0d8,#c3dea8);
+  }
+  .loyalty-shopname{
+    font-family:'Kanit',sans-serif;font-weight:800;font-size:17px;color:#2e4a1f;margin-bottom:4px;
+  }
+  .loyalty-title{
+    display:inline-block;background:#4c7a2e;color:#fff;
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:13.5px;
+    padding:5px 16px;border-radius:999px;
+  }
+  .loyalty-sub{font-size:11.5px;color:#3f5c2e;margin-top:6px;}
+  .loyalty-stamps-grid{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+    padding:16px;
+  }
+  .loyalty-stamp{
+    aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:#fff;border:2px solid #a9c97f;color:#5c7a45;
+    font-family:'Kanit',sans-serif;font-weight:700;font-size:15px;position:relative;
+  }
+  .loyalty-stamp.filled{background:#4c7a2e;border-color:#3f5c2e;color:#fff;}
+  .loyalty-stamp .leaf{position:absolute;top:-4px;right:-2px;font-size:11px;}
+  .loyalty-free-badge{
+    margin:0 16px 16px;padding:14px;border-radius:16px;text-align:center;
+    background:#2e4a1f;color:#fff;font-family:'Kanit',sans-serif;
+  }
+  .loyalty-free-badge .cup{font-size:26px;display:block;margin-bottom:2px;}
+  .loyalty-free-badge b{font-size:15px;}
+  .loyalty-footer{
+    background:#2e4a1f;color:#cfe3b8;text-align:center;font-size:11px;padding:8px;
+  }
   .member-form-field{margin-bottom:12px;}
   .member-form-field label{display:block;font-size:12.5px;color:var(--dim);margin-bottom:6px;font-family:'Kanit',sans-serif;}
   .member-form-field input{
@@ -683,7 +723,12 @@ function showToast(){
 
 loadMenu();
 
+let shopSettings = {};
 if(db){
+  db.ref('settings').on('value', snap=>{
+    shopSettings = snap.val() || {};
+  });
+
   db.ref('settings/promo').on('value', snap=>{
     const promo = snap.val();
     const banner = document.getElementById('promoBanner');
@@ -911,19 +956,37 @@ function renderMemberDashboard(body){
   const stamps = memberData.stampCount || 0;
   const filled = stamps % 10;
   const canRedeem = stamps >= 10;
-  let dotsHtml = '';
-  for(let i=0;i<10;i++){
-    dotsHtml += `<div class="stamp-dot ${i < filled ? 'filled' : ''}">${i < filled ? '🥤' : ''}</div>`;
+  const shopName = shopSettings.shopName || 'ร้านค้า';
+  const shopPhone = shopSettings.phone || '';
+
+  let stampsHtml = '';
+  for(let i=1;i<=10;i++){
+    const isFilled = i <= filled;
+    stampsHtml += `<div class="loyalty-stamp ${isFilled ? 'filled' : ''}">${isFilled ? '🍃' : i}</div>`;
   }
+
+  const loyaltyCardHtml = `
+    <div class="loyalty-card">
+      <div class="loyalty-header">
+        <div class="loyalty-shopname">${shopName}</div>
+        <span class="loyalty-title">บัตรสะสมแต้ม 10 ฟรี 1</span>
+        <div class="loyalty-sub">สะสมครบ 10 แก้ว รับฟรี 1 แก้วทันที</div>
+      </div>
+      <div class="loyalty-stamps-grid">${stampsHtml}</div>
+      ${canRedeem
+        ? `<div class="loyalty-free-badge"><span class="cup">🥤</span><b>ครบแล้ว! กดรับคูปองด้านล่าง</b></div>`
+        : `<div class="loyalty-free-badge" style="background:#3f5c2e;"><b>สะสมแล้ว ${filled}/10 แก้ว</b></div>`}
+      ${shopPhone ? `<div class="loyalty-footer">📞 ${shopPhone}</div>` : ''}
+    </div>
+  `;
 
   body.innerHTML = `
     <div class="member-form-field">
       <div style="font-family:'Kanit',sans-serif;font-weight:700;font-size:16px;">${memberData.name}</div>
       <div style="color:var(--dim);font-size:12.5px;">สมาชิกเลขที่ #${String(memberData.memberNo).padStart(4,'0')}</div>
     </div>
-    <div style="font-size:13px;color:var(--dim);margin-bottom:4px;">สะสมแก้ว (${filled}/10)</div>
-    <div class="stamp-progress">${dotsHtml}</div>
-    ${canRedeem ? `<button class="redeem-btn" id="redeemBtn">🎁 ใช้คูปองน้ำปั่น 1 แก้วฟรี</button>` : `<div style="font-size:12px;color:var(--dim);margin-top:6px;">ซื้อครบ 10 แก้ว รับฟรี 1 แก้ว</div>`}
+    ${loyaltyCardHtml}
+    ${canRedeem ? `<button class="redeem-btn" id="redeemBtn">🎁 ใช้คูปองน้ำปั่น 1 แก้วฟรี</button>` : ''}
     ${freeRedeemItemId ? `<div style="margin-top:10px;padding:10px;background:var(--char-2);border-radius:10px;font-size:13px;color:var(--turmeric);">✅ เลือก "${freeRedeemItemName}" ฟรีไว้ในตะกร้าแล้ว</div>` : ''}
     <div id="redeemPickerArea"></div>
     <div class="section-title" style="font-family:'Kanit',sans-serif;font-weight:700;font-size:13px;color:var(--dim);margin:18px 0 8px;">ประวัติการสั่งของคุณ</div>
