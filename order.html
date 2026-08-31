@@ -50,6 +50,23 @@
   .call-bill-btn:active{transform:scale(.95);}
   .call-bill-btn[disabled]{opacity:.5;}
 
+  .member-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(122,154,74,.15);border:1px solid var(--leaf);color:#a9c97f;
+    font-family:'Kanit',sans-serif;font-weight:600;font-size:12.5px;
+    padding:6px 12px;border-radius:999px;margin-left:8px;
+  }
+  .stamp-progress{
+    display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;
+  }
+  .stamp-dot{
+    width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:13px;
+    background:var(--char-2);border:1px solid var(--line);color:var(--dim);
+  }
+  .stamp-dot.filled{background:var(--turmeric);border-color:var(--turmeric);color:#241a06;}
+
+  /* loyalty card widget (green branded design) */
   .loyalty-card{
     border-radius:20px;overflow:hidden;margin-bottom:16px;
     background:linear-gradient(135deg,#eaf3df,#cfe3b8);
@@ -78,6 +95,7 @@
     font-family:'Kanit',sans-serif;font-weight:700;font-size:15px;position:relative;
   }
   .loyalty-stamp.filled{background:#4c7a2e;border-color:#3f5c2e;color:#fff;}
+  .loyalty-stamp .leaf{position:absolute;top:-4px;right:-2px;font-size:11px;}
   .loyalty-free-badge{
     margin:0 16px 16px;padding:14px;border-radius:16px;text-align:center;
     background:#2e4a1f;color:#fff;font-family:'Kanit',sans-serif;
@@ -214,6 +232,7 @@
   .promo-sheet-price .old{text-decoration:line-through;color:var(--dim);margin-right:6px;}
   .promo-sheet-price .new{color:var(--turmeric);font-weight:700;font-family:'Kanit',sans-serif;}
 
+  /* cart bar */
   .cart-bar{
     position:fixed;left:14px;right:14px;bottom:14px;z-index:30;
     background:var(--chili);border-radius:18px;
@@ -231,6 +250,7 @@
   .cart-bar .mid{display:flex;align-items:center;gap:10px;color:#fff;font-weight:600;font-size:14px;}
   .cart-bar .total{color:#fff;font-weight:800;font-size:16px;}
 
+  /* cart sheet */
   .overlay{
     position:fixed;inset:0;background:rgba(10,8,6,.6);z-index:40;
     display:none;
@@ -319,6 +339,7 @@
 
 <div class="toast" id="toast">ส่งออเดอร์เรียบร้อย 🎉</div>
 
+<!-- promotions list sheet -->
 <div class="overlay" id="overlayPromo"></div>
 <div class="sheet" id="promoSheet">
   <div class="sheet-head">
@@ -328,6 +349,7 @@
   <div class="sheet-list" id="promoSheetList"></div>
 </div>
 
+<!-- member sheet -->
 <div class="overlay" id="overlayMember"></div>
 <div class="sheet" id="memberSheet">
   <div class="sheet-head">
@@ -337,6 +359,7 @@
   <div class="sheet-list" id="memberSheetBody"></div>
 </div>
 
+<!-- feedback sheet -->
 <div class="overlay" id="overlayFeedback"></div>
 <div class="sheet" id="feedbackSheet">
   <div class="sheet-head">
@@ -350,14 +373,17 @@
   </div>
 </div>
 
+<!-- out-of-stock notice banner -->
 <div class="oos-notice-banner" id="oosBanner">
   <div id="oosBannerText"></div>
   <button id="oosBannerClose">รับทราบ</button>
 </div>
 
+<!-- ===================== Firebase ===================== -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <script>
+// วางค่า firebaseConfig ของโปรเจกต์คุณตรงนี้ (ได้จากขั้นตอน "ลงทะเบียนแอปเว็บ" ใน Firebase Console)
 const firebaseConfig = {
   apiKey: "AIzaSyDAp28CroK5j_iE8LQXngUXXs1DaASqpE8",
   authDomain: "shop-order-system-62765.firebaseapp.com",
@@ -373,6 +399,7 @@ try{
   db = firebase.database();
 }catch(e){ console.warn("ยังไม่ได้ตั้งค่า Firebase:", e); }
 
+// ===================== ข้อมูลตัวอย่าง (ใช้ตอนยังไม่เชื่อม Firebase) =====================
 const sampleMenu = {
   item001:{name:"ส้มตำไทย",category:"ยำ/ส้มตำ",price:45,image:"",available:true},
   item002:{name:"ต้มยำกุ้ง",category:"ต้ม/แกง",price:80,image:"",available:true},
@@ -382,6 +409,7 @@ const sampleMenu = {
   item006:{name:"น้ำมะนาว",category:"เครื่องดื่ม",price:20,image:"",available:true},
 };
 
+// ===================== state =====================
 const params = new URLSearchParams(location.search);
 const tableNo = params.get('table') || '—';
 document.getElementById('tableLabel').textContent = 'โต๊ะ ' + tableNo;
@@ -407,7 +435,7 @@ document.getElementById('callBillBtn').onclick = ()=>{
 
 let menu = {};
 let activeCat = 'ทั้งหมด';
-let cart = {}; 
+let cart = {}; // itemId -> qty
 let promotions = {};
 
 function activePromoForItem(itemId){
@@ -534,6 +562,7 @@ function updateCartBar(){
   bar.classList.toggle('show', count>0);
 }
 
+// cart sheet
 const overlay = document.getElementById('overlay');
 const sheet = document.getElementById('sheet');
 function openSheet(){
@@ -618,11 +647,6 @@ function renderCartList(){
 
 document.getElementById('confirmBtn').onclick = ()=>{
   if(cartCount() === 0) return;
-  if(!db){
-    alert('ยังไม่ได้เชื่อมต่อฐานข้อมูล (Firebase) — ไม่สามารถส่งออเดอร์ได้');
-    return;
-  }
-  
   const bundles = bundleDiscountBreakdown();
   const items = Object.entries(cart).map(([id,qty])=>({itemId:id, name:menu[id].name, price:getEffectivePrice(id), qty}));
 
@@ -644,16 +668,23 @@ document.getElementById('confirmBtn').onclick = ()=>{
     order.memberNo = memberData.memberNo;
   }
 
+  if(!db){
+    alert('ยังไม่ได้เชื่อมต่อฐานข้อมูล (Firebase) — ออเดอร์นี้จะไม่ถูกบันทึก');
+    return;
+  }
+
   const btn = document.getElementById('confirmBtn');
   btn.disabled = true;
   btn.textContent = 'กำลังส่ง...';
 
   db.ref('orders').push(order)
     .then((ref)=>{
+      // track this order to watch for out-of-stock notices later
       watchedOrderIds.push(ref.key);
       sessionStorage.setItem('watchedOrderIds', JSON.stringify(watchedOrderIds));
       watchOrderForOos(ref.key);
 
+      // update member stamp count
       if(memberId){
         let drinkQty = 0;
         Object.entries(cart).forEach(([id,qty])=>{
@@ -673,7 +704,7 @@ document.getElementById('confirmBtn').onclick = ()=>{
       closeSheet();
       renderMenu();
       updateCartBar();
-      showToast('ส่งออเดอร์เรียบร้อย 🎉');
+      showToast();
     })
     .catch((err)=>{
       alert('ส่งออเดอร์ไม่สำเร็จ: ' + err.message);
@@ -684,9 +715,8 @@ document.getElementById('confirmBtn').onclick = ()=>{
     });
 };
 
-function showToast(message = 'สำเร็จ'){
+function showToast(){
   const t = document.getElementById('toast');
-  t.textContent = message;
   t.classList.add('show');
   setTimeout(()=> t.classList.remove('show'), 2200);
 }
@@ -716,7 +746,7 @@ if(db){
     const btn = document.getElementById('promoListBtn');
     document.getElementById('promoCount').textContent = activePromos.length;
     btn.classList.toggle('show', activePromos.length > 0);
-    renderMenu();
+    renderMenu(); // refresh prices/strikethrough if menu already loaded
   });
 }
 
@@ -759,9 +789,8 @@ document.getElementById('promoListBtn').onclick = ()=>{
         </div>`;
       }
       const item = menu[p.itemId];
-      if(!item) return '';
-      const available = item.available !== false;
-      const qty = cart[p.itemId] || 0;
+      const available = item && item.available !== false;
+      const qty = item ? (cart[p.itemId] || 0) : 0;
       return `
       <div class="promo-sheet-card">
         <div class="promo-sheet-info">
@@ -769,7 +798,7 @@ document.getElementById('promoListBtn').onclick = ()=>{
           ${p.note ? `<div class="promo-sheet-note">${p.note}</div>` : ''}
           <div class="promo-sheet-price"><span class="old">${p.originalPrice}</span><span class="new">${Math.max(0,p.originalPrice-p.discount)} บาท</span></div>
         </div>
-        ${!available
+        ${!item ? '' : !available
           ? `<span class="sold-out-tag" style="position:static;">ของหมด</span>`
           : qty>0
             ? `<div class="stepper">
@@ -788,7 +817,7 @@ document.getElementById('promoListBtn').onclick = ()=>{
         else { cart[id] = (cart[id]||0) - 1; if(cart[id]<=0) delete cart[id]; }
         renderMenu();
         updateCartBar();
-        document.getElementById('promoListBtn').click();
+        document.getElementById('promoListBtn').click(); // re-render sheet list with updated qty
       };
     });
   }
@@ -803,6 +832,7 @@ function closePromoSheet(){
 document.getElementById('promoSheetClose').onclick = closePromoSheet;
 document.getElementById('overlayPromo').onclick = closePromoSheet;
 
+// ================= MEMBERSHIP SYSTEM =================
 const DRINK_CATEGORY_HINTS = ['เย็น', 'ปั่น'];
 function isDrinkCategory(cat){
   if(!cat) return false;
@@ -819,6 +849,7 @@ function watchMember(){
   db.ref('members/' + memberId).on('value', snap=>{
     memberData = snap.val();
     if(!memberData){
+      // memberId invalid/deleted — reset
       localStorage.removeItem('memberId');
       memberId = null;
     }
@@ -889,7 +920,7 @@ function showSignupForm(){
         memberId = ref.key;
         localStorage.setItem('memberId', memberId);
         watchMember();
-        setTimeout(()=>{ renderMemberSheet(); }, 300);
+        setTimeout(()=>{ renderMemberSheet(); }, 300); // wait briefly for watchMember snapshot
       })
       .catch(err=> alert('สมัครไม่สำเร็จ: ' + err.message));
   };
@@ -987,14 +1018,14 @@ function renderMemberDashboard(body){
     };
   }
 
-  db.ref('orders').orderByChild('memberId').equalTo(memberId).limitToLast(15).once('value')
+  db.ref('members/' + memberId + '/history').limitToLast(15).once('value')
     .then(snap=>{
       const val = snap.val() || {};
       const list = Object.values(val).sort((a,b)=> b.timestamp - a.timestamp);
       const histEl = document.getElementById('memberHistoryList');
       if(!histEl) return;
       if(list.length === 0){
-        histEl.innerHTML = `<div class="empty-note">ยังไม่มีประวัติการสั่ง</div>`;
+        histEl.innerHTML = `<div class="empty-note">ยังไม่มีประวัติการสั่ง (ประวัติจะขึ้นหลังปิดโต๊ะแล้ว)</div>`;
         return;
       }
       histEl.innerHTML = list.map(o=>{
@@ -1005,6 +1036,7 @@ function renderMemberDashboard(body){
     });
 }
 
+// ================= FEEDBACK =================
 const overlayFeedback = document.getElementById('overlayFeedback');
 const feedbackSheetEl = document.getElementById('feedbackSheet');
 document.getElementById('feedbackBtn').onclick = ()=>{
@@ -1033,6 +1065,7 @@ document.getElementById('feedbackSubmitBtn').onclick = ()=>{
     .catch(err=> alert('ส่งไม่สำเร็จ: ' + err.message));
 };
 
+// ================= OUT-OF-STOCK NOTICE (for orders placed this session) =================
 let watchedOrderIds = JSON.parse(sessionStorage.getItem('watchedOrderIds') || '[]');
 let seenOosNotices = JSON.parse(sessionStorage.getItem('seenOosNotices') || '[]');
 

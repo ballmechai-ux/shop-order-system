@@ -385,7 +385,7 @@ let currentBillTotal = 0;
 let currentItems = [];
 let payMethod = 'cash';
 
-db.ref('orders').on('value', snap=>{
+db.ref('orders').limitToLast(150).on('value', snap=>{
   orders = snap.val() || {};
   render();
 });
@@ -519,10 +519,25 @@ document.getElementById('confirmPayBtn').onclick = ()=>{
     dateStr: now.toISOString().slice(0,10)
   };
 
-  const updates = {};
-  currentOrderIds.forEach(id=>{ updates['orders/' + id + '/status'] = 'paid'; });
+  // save a lightweight copy into each member's own history before we remove the live order
+  // (keeps "ประวัติการสั่งของคุณ" working without needing to keep every order forever)
+  const memberHistoryPushes = [];
+  currentOrderIds.forEach(id=>{
+    const ord = orders[id];
+    if(ord && ord.memberId){
+      const histRef = db.ref('members/' + ord.memberId + '/history').push();
+      memberHistoryPushes.push(histRef.set({ items: ord.items, total: ord.total, timestamp: ord.timestamp }));
+    }
+  });
 
-  db.ref().update(updates)
+  const updates = {};
+  // remove paid orders from the live "orders" list entirely — the data is already
+  // preserved in this bill record, and keeping paid orders around forever was
+  // making every kitchen/cashier screen re-download the whole history on every update
+  currentOrderIds.forEach(id=>{ updates['orders/' + id] = null; });
+
+  Promise.all(memberHistoryPushes)
+    .then(()=> db.ref().update(updates))
     .then(()=> db.ref('billCounter').transaction(cur => (cur || 0) + 1))
     .then((result)=>{
       const billNo = result.snapshot.val();

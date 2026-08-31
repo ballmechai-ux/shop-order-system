@@ -445,7 +445,7 @@ function playDing(){
 
 let knownOrderIds = new Set();
 let firstLoad = true;
-db.ref('orders').on('value', snap=>{
+db.ref('orders').limitToLast(150).on('value', snap=>{
   const newOrders = snap.val() || {};
   if(!firstLoad){
     Object.entries(newOrders).forEach(([id, o])=>{
