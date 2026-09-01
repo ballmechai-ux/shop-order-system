@@ -556,7 +556,7 @@ function cartCount(){
 
 function updateCartBar(){
   const bar = document.getElementById('cartBar');
-  const count = cartCount();
+  const count = cartCount() + freeRedeemItems.length;
   document.getElementById('cartCount').textContent = count;
   document.getElementById('cartTotalMini').textContent = cartTotal() + ' บาท';
   bar.classList.toggle('show', count>0);
@@ -582,7 +582,7 @@ function renderCartList(){
   const list = document.getElementById('cartList');
   list.innerHTML = '';
   const entries = Object.entries(cart);
-  if(entries.length === 0){
+  if(entries.length === 0 && freeRedeemItems.length === 0){
     list.innerHTML = '<p class="empty-note">ยังไม่ได้เลือกเมนู</p>';
   }
   entries.forEach(([id,qty])=>{
@@ -645,7 +645,7 @@ function renderCartList(){
 }
 
 document.getElementById('confirmBtn').onclick = ()=>{
-  if(cartCount() === 0) return;
+  if(cartCount() === 0 && freeRedeemItems.length === 0) return;
   const bundles = bundleDiscountBreakdown();
   const items = Object.entries(cart).map(([id,qty])=>({itemId:id, name:menu[id].name, price:getEffectivePrice(id), qty}));
 
