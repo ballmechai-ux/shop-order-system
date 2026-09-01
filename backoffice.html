@@ -556,7 +556,18 @@ function renderOrders(){
   });
   list.querySelectorAll('[data-cancel]').forEach(btn=>{
     btn.onclick = ()=>{
-      if(confirm('ยกเลิกออเดอร์นี้ใช่ไหม?')) db.ref('orders/' + btn.dataset.cancel + '/status').set('cancelled');
+      const orderId = btn.dataset.cancel;
+      const order = orders[orderId];
+      if(!confirm('ยกเลิกออเดอร์นี้ใช่ไหม?')) return;
+      // keep a lightweight record of cancellations for reference, then remove
+      // from the live "orders" node so cancelled orders don't pile up forever
+      // and slow down the kitchen/cashier screens over time
+      const logPush = order
+        ? db.ref('cancelledLog').push({ table: order.table, items: order.items, total: order.total, timestamp: Date.now() })
+        : Promise.resolve();
+      logPush
+        .then(()=> db.ref('orders/' + orderId).remove())
+        .catch(err=> alert('ยกเลิกไม่สำเร็จ: ' + err.message));
     };
   });
   list.querySelectorAll('[data-cut-order]').forEach(btn=>{
