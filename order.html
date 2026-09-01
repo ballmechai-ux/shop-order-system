@@ -612,15 +612,16 @@ function renderCartList(){
     list.appendChild(row);
   });
 
-  if(freeRedeemItemId && menu[freeRedeemItemId]){
+  freeRedeemItems.forEach((r, idx)=>{
+    if(!menu[r.itemId]) return;
     const row = document.createElement('div');
     row.className = 'cart-row';
     row.style.color = 'var(--leaf)';
     row.innerHTML = `
-      <div style="flex:1;">🎁 ${freeRedeemItemName} (คูปองฟรี)</div>
-      <div class="price" style="color:var(--leaf);">0 บาท <button id="cancelFreeRedeem" style="margin-left:6px;background:none;border:none;color:var(--dim);">✕</button></div>`;
+      <div style="flex:1;">🎟️ ${r.name} (คูปองฟรี)</div>
+      <div class="price" style="color:var(--leaf);">0 บาท <button data-cancel-redeem="${idx}" style="margin-left:6px;background:none;border:none;color:var(--dim);">✕</button></div>`;
     list.appendChild(row);
-  }
+  });
 
   list.querySelectorAll('[data-act]').forEach(btn=>{
     btn.onclick = ()=>{
@@ -633,15 +634,13 @@ function renderCartList(){
       document.getElementById('cartTotalFull').textContent = cartTotal() + ' บาท';
     };
   });
-  const cancelFreeBtn = document.getElementById('cancelFreeRedeem');
-  if(cancelFreeBtn){
-    cancelFreeBtn.onclick = (e)=>{
+  list.querySelectorAll('[data-cancel-redeem]').forEach(btn=>{
+    btn.onclick = (e)=>{
       e.stopPropagation();
-      freeRedeemItemId = null;
-      freeRedeemItemName = null;
+      freeRedeemItems.splice(parseInt(btn.dataset.cancelRedeem), 1);
       renderCartList();
     };
-  }
+  });
   document.getElementById('cartTotalFull').textContent = cartTotal() + ' บาท';
 }
 
@@ -650,9 +649,12 @@ document.getElementById('confirmBtn').onclick = ()=>{
   const bundles = bundleDiscountBreakdown();
   const items = Object.entries(cart).map(([id,qty])=>({itemId:id, name:menu[id].name, price:getEffectivePrice(id), qty}));
 
-  if(freeRedeemItemId && menu[freeRedeemItemId]){
-    items.push({ itemId: freeRedeemItemId, name: menu[freeRedeemItemId].name + ' (ฟรี)', price: 0, qty: 1, isFreeRedeem: true });
-  }
+  const redeemedCount = freeRedeemItems.length;
+  freeRedeemItems.forEach(r=>{
+    if(menu[r.itemId]){
+      items.push({ itemId: r.itemId, name: menu[r.itemId].name + ' (คูปองฟรี)', price: 0, qty: 1, isFreeRedeem: true });
+    }
+  });
 
   const order = {
     table: tableNo,
@@ -667,6 +669,7 @@ document.getElementById('confirmBtn').onclick = ()=>{
     order.memberId = memberId;
     order.memberNo = memberData.memberNo;
   }
+  if(redeemedCount > 0) order.couponsRedeemed = redeemedCount;
 
   if(!db){
     alert('ยังไม่ได้เชื่อมต่อฐานข้อมูล (Firebase) — ออเดอร์นี้จะไม่ถูกบันทึก');
@@ -684,7 +687,8 @@ document.getElementById('confirmBtn').onclick = ()=>{
       sessionStorage.setItem('watchedOrderIds', JSON.stringify(watchedOrderIds));
       watchOrderForOos(ref.key);
 
-      // update member stamp count
+      // update member stamp count / coupons used (stampCount is cumulative and never decremented;
+      // available coupons are always computed as floor(stampCount/10) - couponsUsed)
       if(memberId){
         let drinkQty = 0;
         Object.entries(cart).forEach(([id,qty])=>{
@@ -693,13 +697,12 @@ document.getElementById('confirmBtn').onclick = ()=>{
         db.ref('members/' + memberId).transaction(m=>{
           if(!m) return m;
           m.stampCount = (m.stampCount || 0) + drinkQty;
-          if(freeRedeemItemId) m.stampCount = Math.max(0, m.stampCount - 10);
+          m.couponsUsed = (m.couponsUsed || 0) + redeemedCount;
           return m;
         });
       }
 
-      freeRedeemItemId = null;
-      freeRedeemItemName = null;
+      freeRedeemItems = [];
       cart = {};
       closeSheet();
       renderMenu();
@@ -841,8 +844,7 @@ function isDrinkCategory(cat){
 
 let memberId = localStorage.getItem('memberId') || null;
 let memberData = null;
-let freeRedeemItemId = null;
-let freeRedeemItemName = null;
+let freeRedeemItems = []; // {itemId, name}
 
 function watchMember(){
   if(!memberId || !db) return;
@@ -954,8 +956,10 @@ function showLoginForm(){
 
 function renderMemberDashboard(body){
   const stamps = memberData.stampCount || 0;
+  const couponsUsed = memberData.couponsUsed || 0;
+  const totalCouponsEarned = Math.floor(stamps / 10);
+  const availableCoupons = Math.max(0, totalCouponsEarned - couponsUsed - freeRedeemItems.length);
   const filled = stamps % 10;
-  const canRedeem = stamps >= 10;
   const shopName = shopSettings.shopName || 'ร้านค้า';
   const shopPhone = shopSettings.phone || '';
 
@@ -973,12 +977,22 @@ function renderMemberDashboard(body){
         <div class="loyalty-sub">สะสมครบ 10 แก้ว รับฟรี 1 แก้วทันที</div>
       </div>
       <div class="loyalty-stamps-grid">${stampsHtml}</div>
-      ${canRedeem
-        ? `<div class="loyalty-free-badge"><span class="cup">🥤</span><b>ครบแล้ว! กดรับคูปองด้านล่าง</b></div>`
-        : `<div class="loyalty-free-badge" style="background:#3f5c2e;"><b>สะสมแล้ว ${filled}/10 แก้ว</b></div>`}
+      <div class="loyalty-free-badge" style="${availableCoupons>0 ? '' : 'background:#3f5c2e;'}">
+        ${availableCoupons>0
+          ? `<span class="cup">🎟️</span><b>คุณมีคูปองสะสม ${availableCoupons} ใบ</b>`
+          : `<b>สะสมแล้ว ${filled}/10 แก้ว (รวมทั้งหมด ${stamps} แก้ว)</b>`}
+      </div>
       ${shopPhone ? `<div class="loyalty-footer">📞 ${shopPhone}</div>` : ''}
     </div>
   `;
+
+  const chosenListHtml = freeRedeemItems.length
+    ? freeRedeemItems.map((r,i)=>`
+        <div style="margin-top:8px;padding:10px;background:var(--char-2);border-radius:10px;font-size:13px;color:var(--turmeric);display:flex;justify-content:space-between;align-items:center;">
+          <span>🎟️ ${r.name} (ฟรี)</span>
+          <button data-remove-redeem="${i}" style="background:none;border:none;color:var(--dim);">✕</button>
+        </div>`).join('')
+    : '';
 
   body.innerHTML = `
     <div class="member-form-field">
@@ -986,14 +1000,23 @@ function renderMemberDashboard(body){
       <div style="color:var(--dim);font-size:12.5px;">สมาชิกเลขที่ #${String(memberData.memberNo).padStart(4,'0')}</div>
     </div>
     ${loyaltyCardHtml}
-    ${canRedeem ? `<button class="redeem-btn" id="redeemBtn">🎁 ใช้คูปองน้ำปั่น 1 แก้วฟรี</button>` : ''}
-    ${freeRedeemItemId ? `<div style="margin-top:10px;padding:10px;background:var(--char-2);border-radius:10px;font-size:13px;color:var(--turmeric);">✅ เลือก "${freeRedeemItemName}" ฟรีไว้ในตะกร้าแล้ว</div>` : ''}
+    ${availableCoupons>0 ? `<button class="redeem-btn" id="redeemBtn">🎟️ ใช้คูปองน้ำปั่น 1 แก้วฟรี</button>` : ''}
+    ${chosenListHtml}
     <div id="redeemPickerArea"></div>
     <div class="section-title" style="font-family:'Kanit',sans-serif;font-weight:700;font-size:13px;color:var(--dim);margin:18px 0 8px;">ประวัติการสั่งของคุณ</div>
     <div id="memberHistoryList"><div class="empty-note">กำลังโหลด...</div></div>
   `;
 
-  if(canRedeem && !freeRedeemItemId){
+  body.querySelectorAll('[data-remove-redeem]').forEach(btn=>{
+    btn.onclick = ()=>{
+      freeRedeemItems.splice(parseInt(btn.dataset.removeRedeem), 1);
+      renderMemberDashboard(body);
+      renderCartList();
+      updateCartBar();
+    };
+  });
+
+  if(availableCoupons > 0){
     document.getElementById('redeemBtn').onclick = ()=>{
       const eligible = Object.entries(menu).filter(([id,it])=> isDrinkCategory(it.category) && it.available !== false);
       const area = document.getElementById('redeemPickerArea');
@@ -1008,8 +1031,7 @@ function renderMemberDashboard(body){
         </div>`).join('');
       area.querySelectorAll('[data-redeem]').forEach(btn=>{
         btn.onclick = ()=>{
-          freeRedeemItemId = btn.dataset.redeem;
-          freeRedeemItemName = btn.dataset.name;
+          freeRedeemItems.push({ itemId: btn.dataset.redeem, name: btn.dataset.name });
           renderMemberDashboard(body);
           renderCartList();
           updateCartBar();
