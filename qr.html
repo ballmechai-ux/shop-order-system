@@ -14,7 +14,10 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;}
-  body{background:var(--paper);color:var(--cream);font-family:'Sarabun',sans-serif;min-height:100vh;padding-bottom:30px;}
+  html{ background:#0d0b09; }
+  body{background:var(--paper);color:var(--cream);font-family:'Sarabun',sans-serif;min-height:100vh;padding-bottom:30px;
+    max-width:480px;margin:0 auto;position:relative;box-shadow:0 0 50px rgba(0,0,0,.5);}
+  @media print{ body{ max-width:none; box-shadow:none; } }
 
   header{padding:18px 18px 10px;}
   h1{font-family:'Kanit',sans-serif;font-weight:800;font-size:22px;margin:0 0 2px;}

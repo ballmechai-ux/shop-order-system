@@ -17,8 +17,17 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;}
-  body{background:var(--paper);color:var(--cream);font-family:'Sarabun',sans-serif;min-height:100vh;padding-bottom:24px;}
+  html{ background:#0d0b09; }
+  :root{ --app-max: 480px; }
+  body{background:var(--paper);color:var(--cream);font-family:'Sarabun',sans-serif;min-height:100vh;padding-bottom:24px;
+    max-width:var(--app-max);margin:0 auto;position:relative;box-shadow:0 0 50px rgba(0,0,0,.5);}
   input,select{font-family:'Sarabun',sans-serif;}
+  @media (min-width:520px){
+    #pinOverlay, .overlay, .sheet{
+      left:max(0px, calc(50% - var(--app-max)/2)) !important;
+      right:max(0px, calc(50% - var(--app-max)/2)) !important;
+    }
+  }
 
   header{position:sticky;top:0;z-index:10;background:var(--paper);border-bottom:1px solid var(--line);padding:16px 18px 0;}
   h1{font-family:'Kanit',sans-serif;font-weight:800;font-size:20px;margin:0 0 2px;}

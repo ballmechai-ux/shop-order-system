@@ -21,12 +21,32 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;}
+  html{ background:#0d0b09; }
+  :root{ --app-max: 480px; }
   body{
     background:var(--paper);
     color:var(--cream);
     font-family:'Sarabun',sans-serif;
     min-height:100vh;
     padding-bottom:96px;
+    max-width:var(--app-max);
+    margin:0 auto;
+    position:relative;
+    box-shadow:0 0 50px rgba(0,0,0,.5);
+  }
+  /* on wide screens (desktop / Samsung DeX), fixed-position elements normally
+     span the whole browser window — pin them to the centered app column instead */
+  @media (min-width:520px){
+    .cart-bar, .overlay, .sheet, .oos-notice-banner{
+      left:max(0px, calc(50% - var(--app-max)/2)) !important;
+      right:max(0px, calc(50% - var(--app-max)/2)) !important;
+      margin-left:auto; margin-right:auto;
+      max-width:var(--app-max);
+    }
+    .oos-notice-banner{
+      left:max(18px, calc(50% - var(--app-max)/2 + 18px)) !important;
+      right:max(18px, calc(50% - var(--app-max)/2 + 18px)) !important;
+    }
   }
   header.top{
     position:sticky;top:0;z-index:20;
